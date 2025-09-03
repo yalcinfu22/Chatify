@@ -2,11 +2,17 @@ import express from "express"; // node.js framework'ü olan express.js kullandı
 import mongoose from "mongoose"; // ORM (Object Relational Mapping) for MongoDB (.NET teki Entity Framework gibi, DB şema ve mapping işlemleri)
 import cors from "cors"; // farklı port veya domainde tarayıcı cors hatası vermemesi için kullandık.
 import consola from "consola"; // konsolda hatalar ve success ler renkli görünmesi için kullandık
+import { fileURLToPath } from 'url';  // ← ADD THIS
 import { createServer } from "http"; // node http server create
+import path from "path";
 
 import { URL, PORT } from "./config/index.js"; // config => .env port ve db bilgilerine tek yerden erişmek için
 
 const { success, error } = consola; // consola destructuring
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 const app = express(); // uygulama create
 const httpServer = createServer(app); // http server create
 const port = PORT; // api nin çalışmasını istediğimiz port
@@ -18,7 +24,6 @@ const port = PORT; // api nin çalışmasını istediğimiz port
 
 
 import userRoutes from "./routes/userRoutes.js";
-// Example: import productRoutes from "./routes/productRoutes.js";
 
 const startApp = async () => {
   try {
@@ -30,9 +35,9 @@ const startApp = async () => {
     };
     
     app.use(cors(corsOptions));
-    app.use(express.static("public")); // static dosyalarımızın hangi folderda olacağını belirliyoruz. File Server Yani
-    // örnek file/image server url http://localhost:3001/images/bg.jpg
-    
+
+    app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
     // api dosya gönderim ve alım limiti 50mb
     app.use(express.json({ limit: "50mb", extended: true }));
     app.use(express.urlencoded({ limit: "50mb", extended: true }));

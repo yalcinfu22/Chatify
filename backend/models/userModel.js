@@ -23,6 +23,10 @@ const userSchema = new mongoose.Schema({ // bir hizmet kullanıcısı tam adı, 
     required: true,
     unique: true,
   },
+  profilePicture: {
+      type: String,
+      default: null // Will store the file path/URL
+  },
   chats: [
       {
           type: mongoose.Schema.Types.ObjectId,

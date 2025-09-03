@@ -6,15 +6,21 @@ const chatSchema = mongoose.Schema(
             type: String,
             required: true
         },
+        users: [
+            {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: 'User', // User modeline referans
+            },
+        ],
         isGroupChat: { 
             type: Boolean, 
             default: false 
         },
-        groupAdmin: {
-          type: mongoose.Schema.Types.ObjectId,
-          ref: 'User',
+        groupPicture: {
+            type: String,
+            default: null // Will store the file path/URL
         },
-        users: [
+        groupAdmins: [
             {
                 type: mongoose.Schema.Types.ObjectId,
                 ref: 'User', // User modeline referans
