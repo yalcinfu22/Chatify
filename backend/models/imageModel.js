@@ -1,17 +1,36 @@
+// models/imageModel.js
 import mongoose from 'mongoose';
 
-const messageSchema = mongoose.Schema({
-    name: {
-        type: String,
-        trim: true
+const imageSchema = new mongoose.Schema({
+    // Dosyanın sunucudaki yolu veya bulut depolama URL'si. En kritik alan.
+    url: { 
+        type: String, 
+        required: true 
     },
-    imageType: {
+    // Bu dosyayı kimin yüklediği. Güvenlik ve sahiplik için önemli.
+    uploader: { 
+        type: mongoose.Schema.Types.ObjectId, 
+        ref: 'User', 
+        required: true 
+    },
+    // Dosya tipi (profil resmi, sohbet resmi, video vb.)
+    // Bu, ileride farklı dosya tiplerini yönetmeni kolaylaştırır.
+    fileType: {
         type: String,
-        enum: ['video', 'image'],
+        enum: ['image', 'video', 'gif'],
         default: 'image'
     },
-}, { timestamps: true }
-);
+    isDeleted: {
+        type: Boolean,
+        required: true,
+        default: false,
+    },
+    deletedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        required: false
+    },
+}, { timestamps: true });
 
-const Message = mongoose.model('Image', messageSchema);
-export default Message;
+const Image = mongoose.model('Image', imageSchema);
+export default Image;

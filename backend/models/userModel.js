@@ -28,17 +28,25 @@ const userSchema = new mongoose.Schema({ // bir hizmet kullanıcısı tam adı, 
       ref: 'Image',
       default: null,
   },
-  isOnline: {
-    type: Boolean,
-    required: true,
-    default: false,
-  },
   chats: [
       {
           type: mongoose.Schema.Types.ObjectId,
           ref: 'Chat', // User modeline referans
       },
   ],
+  isOnline: {
+    type: Boolean,
+    default: false,
+  },
+  isDeleted: {
+    type: Boolean,
+    default: false,
+  },
+  deletedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: false
+  },
 }, {timestamps: true}
 );
 

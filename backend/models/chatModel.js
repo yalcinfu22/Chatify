@@ -13,6 +13,10 @@ const chatSchema = mongoose.Schema(
                 ref: 'User', // User modeline referans
             },
         ],
+        latestMessage: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'Message'
+        },
         creator: {
             type: mongoose.Schema.Types.ObjectId,
             required: true,
@@ -33,10 +37,18 @@ const chatSchema = mongoose.Schema(
                 ref: 'User', // User modeline referans
             },
         ],
+        isDeleted: {
+            type: Boolean,
+            required: true,
+            default: false,
+        },
+        deletedBy: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'User',
+            required: false
+        },
     },
-    {
-        timestamps: true,
-    }
+    {timestamps: true}
 );
 
 const Chat = mongoose.model('Chat', chatSchema);
