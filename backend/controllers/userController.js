@@ -6,6 +6,9 @@
 // const userService = new UserService(); // CLASS'tan INSTANCE alıyoruz (OOP). İçindeki fonksiyonlara erişebilmek ve kullanabilmek için
 
 import UserService from "../services/userService.js"
+const userService = new UserService()
+
+import test from "../utils/test.js";
 
 export default class UserController {
   async login(req, res) {

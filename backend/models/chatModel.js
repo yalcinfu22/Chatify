@@ -10,11 +10,6 @@ const chatSchema = mongoose.Schema(
             type: Boolean, 
             default: false 
         },
-        chatImage: {
-          type: mongoose.Schema.Types.ObjectId,
-          ref: 'Image',
-          required: false
-        },
         groupAdmin: {
           type: mongoose.Schema.Types.ObjectId,
           ref: 'User',

@@ -12,6 +12,8 @@ const validationController = new ValidationController();
 import UserController from "../controllers/userController.js";
 const userController = new UserController();
 
+import test from "../utils/test.js";
+
 router.post(
   "/login",
   [ // Kontrolleri bir dizi içinde tanımlamak daha iyi bir pratiktir

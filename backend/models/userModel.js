@@ -23,11 +23,6 @@ const userSchema = new mongoose.Schema({ // bir hizmet kullanıcısı tam adı, 
     required: true,
     unique: true,
   },
-  profileImage: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Image',
-    required: false
-  },
   chats: [
       {
           type: mongoose.Schema.Types.ObjectId,
