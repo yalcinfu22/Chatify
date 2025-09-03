@@ -1,26 +1,33 @@
 import mongoose from 'mongoose';
+import { createRef } from 'react';
 
 const chatSchema = mongoose.Schema(
     {
-        chatName: { 
+        name: { 
             type: String,
             required: true
         },
-        users: [
+        members: [
             {
                 type: mongoose.Schema.Types.ObjectId,
                 ref: 'User', // User modeline referans
             },
         ],
+        creator: {
+            type: mongoose.Schema.Types.ObjectId,
+            required: true,
+            ref: 'User'
+        },
         isGroupChat: { 
             type: Boolean, 
             default: false 
         },
         groupPicture: {
-            type: String,
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'Image',
             default: null // Will store the file path/URL
         },
-        groupAdmins: [
+        admins: [
             {
                 type: mongoose.Schema.Types.ObjectId,
                 ref: 'User', // User modeline referans

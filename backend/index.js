@@ -24,6 +24,7 @@ const port = PORT; // api nin çalışmasını istediğimiz port
 
 
 import userRoutes from "./routes/userRoutes.js";
+import chatRoutes from "./routes/chatRoutes.js";
 
 const startApp = async () => {
   try {
@@ -59,7 +60,7 @@ const startApp = async () => {
     
 
     app.use("/users", userRoutes);
-    //app.use("/chats", chatRoutes);
+    app.use("/chats", chatRoutes);
 
     // Example: app.use("/users", userRoutes);
     // Example: app.use("/products", productRoutes);

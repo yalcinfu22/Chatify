@@ -24,8 +24,14 @@ const userSchema = new mongoose.Schema({ // bir hizmet kullanıcısı tam adı, 
     unique: true,
   },
   profilePicture: {
-      type: String,
-      default: null // Will store the file path/URL
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Image',
+      default: null,
+  },
+  isOnline: {
+    type: Boolean,
+    required: true,
+    default: false,
   },
   chats: [
       {

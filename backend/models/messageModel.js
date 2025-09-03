@@ -1,9 +1,14 @@
 import mongoose from 'mongoose';
 
 const messageSchema = mongoose.Schema({
-    content: { 
-        type: String, 
-        trim: true 
+    content: {
+        type: String,
+        trim: true
+    },
+    contentType: {
+        type: String,
+        enum: ['text', 'link', 'emoji', 'video', 'image'],
+        default: 'text'
     },
     sender: {
         type: mongoose.Schema.Types.ObjectId,
@@ -15,7 +20,7 @@ const messageSchema = mongoose.Schema({
         ref: 'Chat',
         required: true,
     }
-}, {timestamps: true}
+}, { timestamps: true }
 );
 
 const Message = mongoose.model('Message', messageSchema);
