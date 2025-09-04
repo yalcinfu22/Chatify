@@ -16,21 +16,10 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+import AuthService from "../services/authService.js";
+const authService = new AuthService();
 
 import test from "../utils/test.js";
-
-// Helper function to delete uploaded file
-const deleteUploadedFile = (filePath) => {
-  try {
-    const fullPath = path.join(__dirname, '../', filePath);
-    if (fs.existsSync(fullPath)) {
-      fs.unlinkSync(fullPath);
-      console.log('Deleted uploaded file:', filePath);
-    }
-  } catch (error) {
-    console.error('Error deleting file:', error);
-  }
-};
 
 
 export default class UserController {
@@ -49,43 +38,11 @@ export default class UserController {
   }
 
   async register(req, res) {
-    let uploadedFilePath = null;
-    
     try {
-      const {username, password, name, surname, phone} = req.body;
-      
-      // Check if profile picture was uploaded
-      if (req.file) {
-        uploadedFilePath = `/uploads/user-profile-pictures/${req.file.filename}`;
-      }
-      
-      const userData = {
-        username, 
-        password, 
-        name, 
-        surname, 
-        phone,
-        ...(uploadedFilePath && { profilePicture: uploadedFilePath })
-      };
-      
-      const result = await userService.register(userData);
-      
-      // If registration failed, delete the uploaded file
-      if (!result.success && uploadedFilePath) {
-        deleteUploadedFile(uploadedFilePath);
-      }
-      
-      res.send(result);
+      const result = await authService.register(req.body, req.file);
+      res.status(201).send(result);
     } catch (error) {
-      // If there's an error and we uploaded a file, delete it
-      if (uploadedFilePath) {
-        deleteUploadedFile(uploadedFilePath);
-      }
-      
-      return res.status(400).json({
-        success: false,
-        errorMessage: error.message || error
-      });
+      res.status(400).json({ success: false, errorMessage: error.message });
     }
   }
 }

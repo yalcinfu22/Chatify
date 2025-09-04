@@ -1,5 +1,4 @@
 import User from '../models/userModel.js';
-
 import test from '../utils/test.js';
 
 export default class UserRepository {
@@ -12,9 +11,22 @@ export default class UserRepository {
         return user
     }
     async saveUser(newUser) {
-        const {username, password} = newUser
-        console.log({username, password})
-        const result = await newUser.save(); 
+        const user = new User(newUser);
+        const result = await user.save(); 
         return result;
+    }
+    async updateProfilePicture(userId, image_id) {
+        const updatedUser = await User.findByIdAndUpdate(
+            userId,
+            { profilePicture: image_id},
+            { new: true }
+        );
+        console.log(updatedUser)
+        return updatedUser;
+    }
+    async deleteUser(userId) {
+        const deletedUser = await User.findByIdAndDelete(userId);
+        console.log("Silinen kullanıcı:", deletedUser);
+        return deletedUser;
     }
 }

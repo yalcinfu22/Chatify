@@ -26,8 +26,8 @@ export default class UserService {
 
       if (user === null) {
         return {
+          success: false,
           errorMessage: "Kullanıcı Bulunamadı! Lütfen bilgilerinizi kontrol ediniz.",
-          success: false
         };
       }
 
@@ -54,8 +54,8 @@ export default class UserService {
         };
       } else {
         return {
-          errorMessage: "Hatalı Şifre!",
           success: false,
+          errorMessage: "Hatalı Şifre!",
         };
       }
     } catch (error) {

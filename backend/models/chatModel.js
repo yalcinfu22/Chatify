@@ -3,10 +3,6 @@ import { createRef } from 'react';
 
 const chatSchema = mongoose.Schema(
     {
-        name: { 
-            type: String,
-            required: true
-        },
         members: [
             {
                 type: mongoose.Schema.Types.ObjectId,
@@ -17,14 +13,13 @@ const chatSchema = mongoose.Schema(
             type: mongoose.Schema.Types.ObjectId,
             ref: 'Message'
         },
-        creator: {
-            type: mongoose.Schema.Types.ObjectId,
-            required: true,
-            ref: 'User'
-        },
         isGroupChat: { 
             type: Boolean, 
             default: false 
+        },
+        name: {
+            type: String,
+            default: null
         },
         groupPicture: {
             type: mongoose.Schema.Types.ObjectId,
@@ -37,6 +32,11 @@ const chatSchema = mongoose.Schema(
                 ref: 'User', // User modeline referans
             },
         ],
+        creator: {
+            type: mongoose.Schema.Types.ObjectId,
+            required: true,
+            ref: 'User'
+        },
         isDeleted: {
             type: Boolean,
             required: true,

@@ -6,6 +6,7 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+
 // Storage configuration for profile pictures
 const profileStorage = multer.diskStorage({
     destination: function (req, file, cb) {
@@ -32,14 +33,47 @@ const groupStorage = multer.diskStorage({
     }
 });
 
-// File filter - only images
-const fileFilter = (req, file, cb) => {
-    if (file.mimetype.startsWith('image/')) {
-        cb(null, true);
+
+// FILE TYPE BELİRLEME FONKSİYONU
+const determineFileType = (mimetype) => {
+    if (mimetype === 'image/gif') {
+        return 'gif';  // GIF ayrı kategori
+    } else if (mimetype.startsWith('video/')) {
+        return 'video'; // Video türleri
+    } else if (mimetype.startsWith('image/')) {
+        return 'image'; // Diğer tüm resimler (jpeg, png, webp, vs.)
     } else {
-        cb(new Error('Only image files are allowed!'), false);
+        return 'image'; // Default
     }
 };
+
+// FILE FILTER
+const fileFilter = (req, file, cb) => {
+    const allowedMimeTypes = [
+        // Normal images
+        'image/jpeg',
+        'image/jpg', 
+        'image/png',
+        'image/webp',
+        'image/bmp',
+        // GIF (ayrı kategori olacak)
+        'image/gif',
+        // Videos
+        'video/mp4',
+        'video/mpeg',
+        'video/quicktime',
+        'video/webm'
+    ];
+
+    if (allowedMimeTypes.includes(file.mimetype)) {
+        // File objesine fileType'ı ekle
+        file.fileType = determineFileType(file.mimetype);
+        cb(null, true);
+    } else {
+        cb(new Error(`Desteklenmeyen dosya türü: ${file.mimetype}`), false);
+    }
+};
+
 
 // Create upload instances
 export const profileUpload = multer({
