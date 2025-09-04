@@ -24,7 +24,7 @@ export default class UserService {
     try {
       user = await userRepository.findByUsername(username);
 
-      if (user === null) {
+      if (!user) {
         return {
           success: false,
           errorMessage: "Kullanıcı Bulunamadı! Lütfen bilgilerinizi kontrol ediniz.",
@@ -85,7 +85,7 @@ export default class UserService {
             success: result !== null ? true : false, // result null dan farklı ise kayıt gerçekleşti demektir
             data: result
           };
-
+          
         } else {
 
           return {
@@ -108,12 +108,10 @@ export default class UserService {
         };
       }
 
-    } catch (error) 
-    {
-
+    } catch (error) {
       return {
         success: false,
-        errorMessage: error,
+        errorMessage: error.message || "Sunucuda beklenmedik bir hata oluştu.",
       };
     }
   }

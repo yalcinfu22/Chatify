@@ -25,14 +25,19 @@ import test from "../utils/test.js";
 export default class UserController {
   async login(req, res) {
     try {
-      let { username, password } = req.body;  // web den fetch POST olarak body de set edip gönderdiğimiz alanları alıyoruz
-      let result = await userService.login(username, password); // login service
-      res.send(result);
+      const { username, password } = req.body;
+      const result = await userService.login(username, password);
+      
+      if (!result.success) {
+        return res.status(400).send(result); // 400 Bad Request
+      }
+      return res.status(200).send(result); // 200 OK
 
     } catch (error) {
-      return res.status(400).json({
+      // Beklenmedik bir sunucu hatası
+      return res.status(500).json({
         success: false,
-        errorMessage: error
+        errorMessage: error.message || "Internal Server Error"
       });
     }
   }
@@ -40,9 +45,18 @@ export default class UserController {
   async register(req, res) {
     try {
       const result = await authService.register(req.body, req.file);
-      res.status(201).send(result);
+
+      if (!result.success) {
+        return res.status(400).send(result); // 400 Bad Request
+      }
+      return res.status(201).send(result); // 201 Created
+
     } catch (error) {
-      res.status(400).json({ success: false, errorMessage: error.message });
+      // Beklenmedik bir sunucu hatası
+      return res.status(500).json({ 
+        success: false, 
+        errorMessage: error.message || "Internal Server Error"
+      });
     }
   }
 }

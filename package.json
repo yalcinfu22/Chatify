@@ -7,8 +7,5 @@
   },
   "author": "Furkan",
   "license": "ISC",
-  "description": "",
-  "dependencies": {
-    "multer": "^2.0.2"
-  }
+  "description": ""
 }

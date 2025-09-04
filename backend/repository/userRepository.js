@@ -1,6 +1,7 @@
 import User from '../models/userModel.js';
 import test from '../utils/test.js';
 
+
 export default class UserRepository {
     async findByUsername(username) {
         const user = await User.findOne({username: username})

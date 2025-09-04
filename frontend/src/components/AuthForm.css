@@ -1,0 +1,56 @@
+.auth-form {
+    display: flex;
+    flex-direction: column;
+    gap: 15px; /* Form elemanları arasında boşluk */
+    text-align: left;
+}
+
+.auth-form h2 {
+    text-align: center;
+    color: #444;
+    margin-bottom: 20px;
+    font-size: 24px;
+}
+
+.form-group {
+    margin-bottom: 10px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    color: #666;
+    font-size: 14px;
+}
+
+.form-group input[type="text"],
+.form-group input[type="password"],
+.form-group input[type="tel"],
+.form-group input[type="file"] {
+    width: calc(100% - 20px); /* Padding için ayarlama */
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    font-size: 16px;
+    box-sizing: border-box; /* Padding'i width içine dahil et */
+}
+
+.form-group input[type="file"] {
+    padding: 5px; /* File input için daha az padding */
+}
+
+.submit-button {
+    background-color: #28a745; /* Yeşil buton rengi */
+    color: white;
+    padding: 12px 20px;
+    border: none;
+    border-radius: 5px;
+    font-size: 18px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    margin-top: 15px;
+}
+
+.submit-button:hover {
+    background-color: #218838; /* Hover'da daha koyu yeşil */
+}
