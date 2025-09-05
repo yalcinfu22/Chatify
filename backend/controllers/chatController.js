@@ -16,7 +16,7 @@ export default class ChatController {
     async createDirectChat(req, res) {
         try {
             const {recipientIdentifier} = req.body
-            const {userId} = req.body.user
+            const {userId} = req.user
             const result = await chatService.createDirectChat(userId, recipientIdentifier);
 
             if (!result.success) {
@@ -33,7 +33,7 @@ export default class ChatController {
     }
     async createGroupChat(req, res) {
         try {
-            const {userId} = req.body.user
+            const {userId} = req.user
             const {name} = req.body
             
             const result = await chatService.createGroupChat(userId, name, req.file);

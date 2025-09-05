@@ -45,7 +45,6 @@ export default class UserController {
   async register(req, res) {
     try {
       const result = await authService.register(req.body, req.file);
-
       if (!result.success) {
         return res.status(400).send(result); // 400 Bad Request
       }

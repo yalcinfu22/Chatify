@@ -15,7 +15,6 @@ import test from "../utils/test.js";
 export default class AuthService {
   async register(userData, file) {
     let newUser = null; // servisten gelecek olan data'yı tutacak
-
     try {
       // 1. KULLANICIYI OLUŞTUR (resim bilgisi olmadan)
       const userResult = await userService.register(userData);
