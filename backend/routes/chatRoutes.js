@@ -52,5 +52,23 @@ router.post(
   chatController.createDirectChat
 );
 
+router.post(
+  "/group",
+  groupUpload.single('groupPicture'),
+  [
+    check(["name"]).exists().notEmpty().isString(),
+    check(["members"]).not().exists(),
+    check(["latestMessage"]).not().exists(),
+    check(["isGroupChat"]).not().exists(),
+    check(["inviteCode"]).not().exists(),
+    check(["admins"]).not().exists(),
+    check(["creator"]).not().exists(),
+    check(["isDeleted"]).not().exists(),
+    check(["deletedBy"]).not().exists(),
+  ],
+  validationController.validateRequest,
+  chatController.createGroupChat
+);
+
 
 export default router

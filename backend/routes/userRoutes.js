@@ -28,7 +28,7 @@ router.post(
 
 router.post( // FORM DATA WILL BE SENT
   "/register",
-  profileUpload.single('profilePicture'), // FIRST POPULATE 
+  profileUpload.single('profilePicture'),
   [
     check("username", "Username is required").notEmpty().isString(),
     check("password", "Password length must be between 6 and 100 characters").isLength({ min: 6, max: 100}),

@@ -20,6 +20,7 @@ const chatSchema = mongoose.Schema(
             type: String,
             unique: true, // indexed by inviteCode
             // We will only generate this for group chats, so it's not required for direct chats
+            sparse: true,  // does not count null
             required: false, 
         },
         name: {

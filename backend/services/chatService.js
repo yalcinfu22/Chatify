@@ -6,21 +6,21 @@ import ChatRepository from './../repository/chatRepository.js';
 const userRepository = new UserRepository();
 const chatRepository = new ChatRepository();
 
+import test from '../utils/test.js';
+
 export default class ChatService {
-    async createDirectChat(creatorId, recipientSpecifier) {
+    async createDirectChat(creatorId, recipientIdentifier) {
         // Hata durumunda geri alınacak kaynakları izlemek için değişkenler
         let newChat = null;
-
         try {
             // 1. HEDEF KULLANICIYI BUL
-            const recipient = await userRepository.findByUsernameOrPhone(recipientSpecifier);
+            const recipient = await userRepository.findByUsernameOrPhone(recipientIdentifier);
             if (!recipient) {
                 return { success: false, errorMessage: "Hedef kullanıcı bulunamadı." };
             }
             if (recipient._id.toString() === creatorId.toString()) {
                 return { success: false, errorMessage: "Kendinizle sohbet başlatamazsınız." }
             }
-
             // 2. MEVCUT SOHBET KONTROLÜ
             const existingChat = await chatRepository.findDirectChatBetweenUsers(creatorId, recipient._id);
             if (existingChat) {
@@ -59,5 +59,9 @@ export default class ChatService {
             
             return { success: false, errorMessage: "Sohbet oluşturulurken beklenmedik bir hata oluştu." }
         }
+    }
+
+    async createGroupChat(creatorId, name, file) {
+        
     }
 }
