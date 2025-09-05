@@ -25,9 +25,26 @@ export default class UserRepository {
         console.log(updatedUser)
         return updatedUser;
     }
-    async deleteUser(userId) {
+    async hardDeleteUser(userId) {
         const deletedUser = await User.findByIdAndDelete(userId);
         console.log("Silinen kullanıcı:", deletedUser);
         return deletedUser;
+    }
+    async softDeleteUser(id, user) {
+      try {
+            await Employee.findByIdAndUpdate(id, {
+              isDeleted: true, 
+              deletedBy: user.userId, 
+              deletedAt: new Date()
+            });
+            return {
+              success: true,
+            };
+        } catch (error) {
+            return {
+              success: false,
+              errorMessage: error,
+            };
+        }
     }
 }

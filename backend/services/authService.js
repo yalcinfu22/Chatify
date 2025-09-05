@@ -21,13 +21,16 @@ export default class AuthService {
       const userResult = await userService.register(userData);
       
       if(!userResult.success) {
+        // fotoğraf yüklemiş bir kullanıcı oluşturulamamış olabilir multer'in koyduğu görseli siliyoruz
+        if (file) {
+          fs.unlinkSync(file.path);
+        }
         return { success: false, errorMessage: userResult.errorMessage }
       }
 
       if (userResult.data) {
         newUser = userResult.data; // data içindeki kullanıcı
       }
-      test(2)
 
       // Eğer dosya yüklenmediyse işlem burada biter.
       if (!file) {
@@ -42,9 +45,7 @@ export default class AuthService {
         uploader: newUser._id,
         fileType: file.fileType
       };
-      test(3)
       const newImage = await imageRepository.saveImage(imageInfo);
-      test(4)
       // 3. KULLANICIYI GÜNCELLE (resim ID'si ile)
       const updatedUser = await userRepository.updateProfilePicture(
         newUser._id, 
@@ -63,7 +64,7 @@ export default class AuthService {
       }
       console.log(newUser)
       if (newUser) {
-        await userRepository.deleteUser(newUser._id);
+        await userRepository.hardDeleteUser(newUser._id);
       }
 
       // Hatayı yukarıya (controller'a) fırlat ki kullanıcıya bilgi verilsin.
