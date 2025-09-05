@@ -29,4 +29,33 @@ export default class ChatRepository {
             throw error;
         }
     }
+
+    async softDeleteChat(chatId, userId) {
+        const updatedChat = await Chat.findByIdAndUpdate(
+            chatId,
+            { 
+                $set: { 
+                    isDeleted: true, 
+                    deletedBy: userId 
+                } 
+            },
+            { new: true }
+        );
+        return updatedChat;
+    }
+
+    /**
+     * Bir sohbeti veritabanından kalıcı olarak siler.
+     * Sadece sistemin hata temizleme (rollback) işlemleri için kullanılmalıdır.
+     * @param {string} chatId - Kalıcı olarak silinecek sohbetin ID'si.
+     * @returns {Promise<Chat|null>} Silinen sohbet dökümanını döndürür.
+     */
+
+    async hardDeleteChat(chatId) {
+        // Not: Bu işlem, bu sohbete referans veren Message ve User dökümanlarını
+        // otomatik olarak GÜNCELLEMEZ. O mantığı Message ve User service'lerinde ele almak gerekir.
+        const deletedChat = await Chat.findByIdAndDelete(chatId);
+        return deletedChat;
+    }
+
 }

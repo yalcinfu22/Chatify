@@ -35,9 +35,8 @@ export default class ChatController {
         try {
             const {userId} = req.body.user
             const {name} = req.body
-            const {file} = req.file
-
-            const result = await chatService.createGroupChat(userId, name, file);
+            
+            const result = await chatService.createGroupChat(userId, name, req.file);
 
             if (!result.success) {
               return res.status(400).send(result); // 400 Bad Request

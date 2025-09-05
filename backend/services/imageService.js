@@ -6,7 +6,7 @@ const imageRepository = new ImageRepository();
 export default class ImageService {
     async saveImage(file, uploaderId) {
         if (!file) {
-            return { success: false, data: { message: "Dosya sağlanmadı." } };
+            return { success: false, errorMessage: "Dosya sağlanmadı." };
         }
         
         try {
@@ -24,10 +24,31 @@ export default class ImageService {
         } catch (error) {
             // Eğer DB'ye kaydederken hata olursa, diske yüklenmiş dosyayı sil.
             fs.unlinkSync(file.path);
-            return { success: false, fields: { 
-                     message: "Resim veritabanına kaydedilemedi.", 
-                     errorMessage: error } 
-                   };
+            return { success: false, errorMessage: error }
         }
+    }
+    async softDeleteById(imageId, userId) {
+        const updatedImage = await Image.findByIdAndUpdate(
+            imageId,
+            { 
+                $set: { 
+                    isDeleted: true, 
+                    deletedBy: userId 
+                } 
+            },
+            { new: true } // Bu seçenek, metodun güncellenmiş dökümanı döndürmesini sağlar.
+        );
+        return updatedImage;
+    }
+
+    /**
+     * Bir görseli veritabanından kalıcı olarak siler.
+     * Sadece sistemin hata temizleme (rollback) işlemleri için kullanılmalıdır.
+     * @param {string} imageId - Kalıcı olarak silinecek görselin ID'si.
+     * @returns {Promise<Image|null>} Silinen görsel dökümanını döndürür.
+     */
+    async hardDeleteById(imageId) {
+        const deletedImage = await Image.findByIdAndDelete(imageId);
+        return deletedImage;
     }
 }

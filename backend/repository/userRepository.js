@@ -26,6 +26,23 @@ export default class UserRepository {
         const result = await user.save(); 
         return result;
     }
+    async addChatToUser(userId, chatId) {
+        try {
+            const result = await User.findByIdAndUpdate(
+                userId, 
+                { $addToSet: { chats: chatId } },  // Duplicate check
+                { new: true }  // Güncellenmiş user'ı döndür
+            );
+            
+            if (!result) {
+                throw new Error("User not found");
+            }
+            
+            return result;
+        } catch (error) {
+            throw error;
+        }
+    }
     async addChatToUsers(userIds, chatId) {
         try {
             await User.updateMany(
