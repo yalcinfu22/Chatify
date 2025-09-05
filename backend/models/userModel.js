@@ -47,6 +47,10 @@ const userSchema = new mongoose.Schema({ // bir hizmet kullanıcısı tam adı, 
     ref: 'User',
     required: false
   },
+  deletedAt: {
+    type: Date,
+    required: false
+  },
   // buraya deleted at eklenecek
 }, {timestamps: true}
 );
