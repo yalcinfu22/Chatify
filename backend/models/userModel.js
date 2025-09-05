@@ -4,7 +4,7 @@ const userSchema = new mongoose.Schema({ // bir hizmet kullanıcısı tam adı, 
   username: {
     type: String,
     required: true,
-    unique: true,
+    unique: true, // indexed by username
   },
   password: {
     type: String,
@@ -21,7 +21,7 @@ const userSchema = new mongoose.Schema({ // bir hizmet kullanıcısı tam adı, 
   phone: {
     type: String,
     required: true,
-    unique: true,
+    unique: true, // indexed by phone
   },
   profilePicture: {
       type: mongoose.Schema.Types.ObjectId,

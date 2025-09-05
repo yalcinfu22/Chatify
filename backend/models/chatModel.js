@@ -1,5 +1,4 @@
 import mongoose from 'mongoose';
-import { createRef } from 'react';
 
 const chatSchema = mongoose.Schema(
     {
@@ -16,6 +15,12 @@ const chatSchema = mongoose.Schema(
         isGroupChat: { 
             type: Boolean, 
             default: false 
+        },
+        inviteCode: {
+            type: String,
+            unique: true, // indexed by inviteCode
+            // We will only generate this for group chats, so it's not required for direct chats
+            required: false, 
         },
         name: {
             type: String,
@@ -34,12 +39,10 @@ const chatSchema = mongoose.Schema(
         ],
         creator: {
             type: mongoose.Schema.Types.ObjectId,
-            required: true,
             ref: 'User'
         },
         isDeleted: {
             type: Boolean,
-            required: true,
             default: false,
         },
         deletedBy: {

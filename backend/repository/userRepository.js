@@ -11,10 +11,33 @@ export default class UserRepository {
         const user = await User.findOne({phone: phone})
         return user
     }
+    async findByUsernameOrPhone(identifier) {
+        const user = await User.findOne({
+            $or: [
+                { username: identifier },
+                { phone: identifier }
+            ]
+        });
+
+        return user;
+    }
     async saveUser(newUser) {
         const user = new User(newUser);
         const result = await user.save(); 
         return result;
+    }
+    async addChatToUsers(userIds, chatId) {
+        try {
+            await User.updateMany(
+                { _id: { $in: userIds } },
+                { $addToSet: { chats: chatId } }
+            );
+        } catch (error) {
+            // 1. Hatayı, hangi fonksiyonda oluştuğu bilgisiyle birlikte logla.
+            console.error(`Error in UserRepository.addChatToUsers: ${error.message}`);
+            // 2. Service katmanının rollback yapabilmesi için hatayı tekrar fırlat.
+            throw error;
+        }
     }
     async updateProfilePicture(userId, image_id) {
         const updatedUser = await User.findByIdAndUpdate(

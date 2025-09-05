@@ -34,11 +34,12 @@ export default class UserService {
       // şifreyi hashlenmiş olarak tuttuğumuz için client den gelen şifreyi de kontrol ediyoruz
       let isMatchPassword = await auth.comparePasswords(password, user.password);
       if (isMatchPassword) {
-        let token = jwt.sign(
+        let token = jwt.sign( 
           {
             userId: user._id,
-            username: user.username,
-            phone: user.phone,
+            username: user.username, // Bu bilgiler token'in payloud'una eklenecek,
+            phone: user.phone,  //  böylece bu üç unique bilgiyi gelen requestlerden kolayca almış oluyoruz
+            
           },
           SECRET,
           {

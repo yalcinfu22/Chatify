@@ -1,0 +1,32 @@
+// repository/chatRepository.js
+import Chat from '../models/chatModel.js';
+
+export default class ChatRepository {
+    async findDirectChatBetweenUsers(userId1, userId2) {
+        // Bu sorgu, veritabanında şu koşulları sağlayan bir döküman arar:
+        // 1. Bir grup sohbeti OLMAMALI (isGroupChat: false).
+        // 2. 'members' dizisi, HEM userId1'i HEM DE userId2'yi İÇERMELİ ($all operatörü).
+        // 3. 'members' dizisinin boyutu TAM OLARAK 2 OLMALI ($size operatörü). Bu, fazladan üye içeren bir sohbetin yanlışlıkla eşleşmesini engeller.
+        const chat = await Chat.findOne({
+            isGroupChat: false,
+            members: { $all: [userId1, userId2], $size: 2 }
+        });
+
+        return chat;
+    }
+
+    async createNewChat(chatData) {
+        try {
+            // Gelen verilerle yeni bir Chat modeli instance'ı oluşturuyoruz.
+            const newChat = new Chat(chatData);
+            
+            // Bu instance'ı veritabanına kaydediyoruz ve kaydedilmiş halini geri döndürüyoruz.
+            return await newChat.save();
+        } catch (error) {
+            // Veritabanı seviyesinde bir hata olursa (örn: bağlantı kopması, validasyon hatası),
+            // hatayı loglayıp bir üst katmana (Service) fırlatıyoruz.
+            console.error("Error in createNewChat repository:", error);
+            throw error;
+        }
+    }
+}
