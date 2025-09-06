@@ -6,7 +6,6 @@ export default class ChatRepository {
         // Bu sorgu, veritabanında şu koşulları sağlayan bir döküman arar:
         // 1. Bir grup sohbeti OLMAMALI (isGroupChat: false).
         // 2. 'members' dizisi, HEM userId1'i HEM DE userId2'yi İÇERMELİ ($all operatörü).
-        // 3. 'members' dizisinin boyutu TAM OLARAK 2 OLMALI ($size operatörü). Bu, fazladan üye içeren bir sohbetin yanlışlıkla eşleşmesini engeller.
         const chat = await Chat.findOne({
             isGroupChat: false,
             members: { $all: [userId1, userId2], $size: 2 }
@@ -14,6 +13,30 @@ export default class ChatRepository {
 
         return chat;
     }
+
+    async findById(chatId) {
+        try {
+            const chat = await Chat.findById(chatId)
+            return chat
+        } catch (error) {
+            console.log("Error in findById repository", error)
+            throw error
+        }
+    }
+
+    async hideChatForUser(chatId, userId) {
+        // $addToSet operatörü, userId'nin 'hiddenFor' dizisine,
+        // eğer zaten mevcut değilse eklenmesini sağlar.
+        const updatedChat = await Chat.findByIdAndUpdate(
+            chatId,
+            { 
+                $addToSet: { hiddenFor: userId } 
+            },
+            { new: true } // Güncellenmiş dökümanı geri döndür
+        );
+
+        return updatedChat;
+    }    
 
     async createNewChat(chatData) {
         try {
@@ -30,7 +53,7 @@ export default class ChatRepository {
         }
     }
 
-    async softDeleteChat(chatId, userId) {
+    async softDeleteById(chatId, userId) {
         const updatedChat = await Chat.findByIdAndUpdate(
             chatId,
             { 

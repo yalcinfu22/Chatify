@@ -46,7 +46,16 @@ router.post(
         }
 
         return true;
-      }),
+      }
+    ),
+    check(["members"]).not().exists(),
+    check(["latestMessage"]).not().exists(),
+    check(["isGroupChat"]).not().exists(),
+    check(["inviteCode"]).not().exists(),
+    check(["admins"]).not().exists(),
+    check(["creator"]).not().exists(),
+    check(["isDeleted"]).not().exists(),
+    check(["deletedBy"]).not().exists(),
   ],
   validationController.validateRequest,
   chatController.createDirectChat
@@ -70,5 +79,11 @@ router.post(
   chatController.createGroupChat
 );
 
+router.delete(
+    '/:chatId',
+    [ param('chatId', 'Geçerli bir sohbet IDsi girilmelidir.').isMongoId() ],
+    validationController.validateRequest,
+    chatController.deleteChat
+);
 
 export default router

@@ -5,10 +5,6 @@ const imageRepository = new ImageRepository();
 
 export default class ImageService {
     async saveImage(file, uploaderId) {
-        if (!file) {
-            return { success: false, errorMessage: "Dosya sağlanmadı." };
-        }
-        
         try {
             const urlForDb = `uploads/chat-pictures/${file.filename}`; // Yolu düzeltelim
 
@@ -28,27 +24,17 @@ export default class ImageService {
         }
     }
     async softDeleteById(imageId, userId) {
-        const updatedImage = await Image.findByIdAndUpdate(
-            imageId,
-            { 
-                $set: { 
-                    isDeleted: true, 
-                    deletedBy: userId 
-                } 
-            },
-            { new: true } // Bu seçenek, metodun güncellenmiş dökümanı döndürmesini sağlar.
-        );
-        return updatedImage;
-    }
-
-    /**
-     * Bir görseli veritabanından kalıcı olarak siler.
-     * Sadece sistemin hata temizleme (rollback) işlemleri için kullanılmalıdır.
-     * @param {string} imageId - Kalıcı olarak silinecek görselin ID'si.
-     * @returns {Promise<Image|null>} Silinen görsel dökümanını döndürür.
-     */
-    async hardDeleteById(imageId) {
-        const deletedImage = await Image.findByIdAndDelete(imageId);
-        return deletedImage;
+        try {
+            // İleride burada daha karmaşık izin kontrolleri olabilir.
+            // Örneğin: "Sadece resmi yükleyen kişi veya bir admin silebilir."
+            const result = await imageRepository.softDeleteById(imageId, userId);
+            if (!result) {
+                return { success: false, statusCode: 404, errorMessage: "Silinecek resim bulunamadı." };
+            }
+            return { success: true, data: result };
+        } catch (error) {
+            console.error("Image soft delete hatası:", error);
+            return { success: false, statusCode: 500, errorMessage: "Resim silinirken bir hata oluştu." };
+        }
     }
 }

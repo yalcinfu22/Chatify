@@ -87,4 +87,12 @@ export default class UserRepository {
             };
         }
     }
+    async removeChatFromAllUsers(chatId) {
+        // 'chats' dizisi 'chatId'yi içeren tüm kullanıcıları bul ve
+        // $pull operatörü ile o elemanı diziden çek/kaldır.
+        return await User.updateMany(
+            { chats: chatId },
+            { $pull: { chats: chatId } }
+        );
+    }
 }

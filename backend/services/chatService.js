@@ -12,6 +12,7 @@ const imageService = new ImageService();
 const userRepository = new UserRepository();
 
 import generateInviteCode from '../helpers/nanoid.js';
+import { canUserManageGroup, isUserMemberOfChat } from '../helpers/permission.js';
 import test from '../utils/test.js';
 
 export default class ChatService {
@@ -76,7 +77,7 @@ export default class ChatService {
                 if (!imageResult.success) {
                     // imageService dosyayı zaten sildi, bizim bir şey yapmamıza gerek yok.
                     // Sadece hatayı alıp Controller'a geri dönelim.
-                    return { success: false, errorMessage: imageResult.errorMessage };
+                    throw imageResult.errorMessage
                 }
                 newImage = imageResult.data;
             }
@@ -117,5 +118,61 @@ export default class ChatService {
             await chatRepository.hardDeleteById(newGroup._id);
             return { success: false, errorMessage: "Grup oluşturuldu ancak kullanıcıya eklenemedi. İşlem geri alındı." };
         }
+    }
+
+    async deleteChat(chatId, userId) {
+        try {
+            // Adım 1: Chati Bul
+            const chat = await chatRepository.findById(chatId);
+            if (!chat) {
+                return { success: false, statusCode: 404, errorMessage: "Sohbet bulunamadı." };
+            }
+
+            // Adım 2: Sohbetin Tipine Göre Karar Ver
+            if (chat.isGroupChat) {
+                // Senaryo A: Bu bir grup sohbeti
+                return await this.deleteGroupChat(chat, userId);
+            } else {
+                // Senaryo B: Bu bir birebir sohbet
+                return await this.deleteDirectChat(chat, userId);
+            }
+
+        } catch (error) {
+            console.error("deleteChat servisinde beklenmedik hata:", error);
+            return { success: false, statusCode: 500, errorMessage: "Sohbet silinirken sunucu hatası oluştu." };
+        }
+    }
+
+    async deleteGroupChat(chat, userId) {
+        // Adım 3a: Yetki Kontrolü (Kullanıcı admin mi?)
+        if (!canUserManageGroup(chat,userId)) {
+            return { success: false, statusCode: 403, errorMessage: "Bu grubu silme yetkiniz yok." };
+        }
+
+        // Adım 3b: Varsa, grubun resmini soft delete yap
+        if (chat.groupPicture) {
+            // imageService'e bu işi delege ediyoruz.
+            await imageService.softDeleteById(chat.groupPicture, userId);
+        }
+
+        // Adım 3c: Sohbeti tüm üyelerin 'chats' dizisinden kaldır
+        await userRepository.removeChatFromAllUsers(chat._id);
+
+        // Adım 3d: Sohbetin kendisini soft delete yap
+        await chatRepository.softDeleteById(chat._id, userId);
+
+        return { success: true, statusCode: 200 };
+    }
+
+    async deleteDirectChat(chat, userId) {
+        // Yetki Kontrolü: Kullanıcı bu sohbetin bir üyesi mi?
+        if (!isUserMemberOfChat(chat,userId)) {
+            return { success: false, statusCode: 403, errorMessage: "Bu sohbete erişim yetkiniz yok." };
+        }
+
+        // Adım 3e: Sohbeti kullanıcı için "gizle"
+        await chatRepository.hideChatForUser(chat._id, userId);
+        
+        return { success: true, statusCode: 200, errorMessage: "Sohbet listenizden kaldırıldı." };
     }
 }

@@ -50,4 +50,19 @@ export default class ChatController {
             });
         } 
     }
+    async deleteChat(req, res) {
+        try {
+            // URL'den gelen 'chatId' parametresini al
+            const { chatId } = req.params; 
+        
+            // Token'dan gelen kullanıcı ID'sini al
+            const userId = req.user.userId;
+        
+            // Servise hem kimin sildiğini hem de neyi sildiğini söyle
+            const result = await chatService.deleteChat(chatId, userId);
+            return res.status(result.statusCode).send(result)
+        } catch (error) {
+            return res.status(500).json({ success: false, errorMessage: error.message });
+        }
+    }
 }

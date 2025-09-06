@@ -12,6 +12,10 @@ const chatSchema = mongoose.Schema(
             type: mongoose.Schema.Types.ObjectId,
             ref: 'Message'
         },
+        hiddenFor: [{
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'User'
+        }],
         isGroupChat: { 
             type: Boolean, 
             default: false 
