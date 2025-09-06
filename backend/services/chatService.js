@@ -131,10 +131,10 @@ export default class ChatService {
             // Adım 2: Sohbetin Tipine Göre Karar Ver
             if (chat.isGroupChat) {
                 // Senaryo A: Bu bir grup sohbeti
-                return await this.deleteGroupChat(chat, userId);
+                return await this.#deleteGroupChat(chat, userId);
             } else {
                 // Senaryo B: Bu bir birebir sohbet
-                return await this.deleteDirectChat(chat, userId);
+                return await this.#deleteDirectChat(chat, userId);
             }
 
         } catch (error) {
@@ -143,7 +143,7 @@ export default class ChatService {
         }
     }
 
-    async deleteGroupChat(chat, userId) {
+    async #deleteGroupChat(chat, userId) {
         // Adım 3a: Yetki Kontrolü (Kullanıcı admin mi?)
         if (!canUserManageGroup(chat,userId)) {
             return { success: false, statusCode: 403, errorMessage: "Bu grubu silme yetkiniz yok." };
@@ -164,7 +164,7 @@ export default class ChatService {
         return { success: true, statusCode: 200 };
     }
 
-    async deleteDirectChat(chat, userId) {
+    async #deleteDirectChat(chat, userId) {
         // Yetki Kontrolü: Kullanıcı bu sohbetin bir üyesi mi?
         if (!isUserMemberOfChat(chat,userId)) {
             return { success: false, statusCode: 403, errorMessage: "Bu sohbete erişim yetkiniz yok." };
@@ -174,5 +174,48 @@ export default class ChatService {
         await chatRepository.hideChatForUser(chat._id, userId);
         
         return { success: true, statusCode: 200, errorMessage: "Sohbet listenizden kaldırıldı." };
+    }
+    async getUserChats(userId) {
+        try {
+            const userChats = await chatRepository.findUserChats(userId);
+
+            const transformedChats = userChats.map(chat => {
+                const chatObject = chat.toObject();
+
+                let displayName = '';
+                let displayPicture = null;
+
+                if (chatObject.isGroupChat) {
+                    displayName = chatObject.name;
+                    displayPicture = chatObject.groupPicture?.url || null;
+                } else {
+                    const otherUser = chatObject.members.find(
+                        member => member._id.toString() !== userId.toString()
+                    );
+                    if (otherUser) {
+                        displayName = `${otherUser.name} ${otherUser.surname}`;
+                        displayPicture = otherUser.profilePicture?.url || null;
+                    } else {
+                        displayName = 'Bilinmeyen Kullanıcı';
+                    }
+                }
+
+                // Bir obje oluşturup geri döndür.
+                // Eskiden '...chatObject' ile tüm alanı yolluyorduk, şimdi ise seçerek yolluyoruz.
+                return {
+                    _id: chatObject._id,
+                    isGroupChat: chatObject.isGroupChat,
+                    displayName,
+                    displayPicture,
+                    latestMessage: chatObject.latestMessage // Populate edilmiş haliyle
+                };
+            });
+
+            return { success: true, data: transformedChats };
+
+        } catch (error) {
+            console.error("getChats servisinde hata:", error);
+            return { success: false, errorMessage: "Sohbetler getirilirken bir hata oluştu." };
+        }
     }
 }

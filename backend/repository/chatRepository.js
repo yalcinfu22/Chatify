@@ -24,6 +24,50 @@ export default class ChatRepository {
         }
     }
 
+    // repository/chatRepository.js
+    async findUserChats(userId) {
+        const chats = await Chat.find({
+            members: userId,
+            isDeleted: false,
+            hiddenFor: { $ne: userId }
+        })
+        .sort({ updatedAt: -1 })
+        .populate({
+            path: 'members', // Birebir sohbetler için diğer kullanıcıyı bulmak amacıyla TÜM üyeleri çekiyoruz...
+            select: 'name surname profilePicture', // ...ama sadece bu alanları alıyoruz.
+            populate: { path: 'profilePicture', select: 'url' }
+        })
+        .populate({
+            path: 'groupPicture', // Grup resmini alıyoruz
+            select: 'url'
+        })
+        .populate({
+            path: 'latestMessage', // Son mesajı alıyoruz
+            select: 'content sender createdAt',
+            populate: { path: 'sender', select: 'name' }
+        });
+
+        return chats;
+    }
+
+    // repository/chatRepository.js
+    async findChatDetailsById(chatId) {
+        // Bu sefer her şeyi, özellikle tüm üyeleri ve adminleri detaylıca populate ediyoruz.
+        const chat = await Chat.findById(chatId)
+            .populate({
+                path: 'members',
+                select: 'name surname username profilePicture isOnline',
+                populate: { path: 'profilePicture', select: 'url' }
+            })
+            .populate({
+                path: 'admins',
+                select: 'name username'
+            })
+            .populate({ path: 'groupPicture', select: 'url' });
+        
+        return chat;
+    }
+
     async hideChatForUser(chatId, userId) {
         // $addToSet operatörü, userId'nin 'hiddenFor' dizisine,
         // eğer zaten mevcut değilse eklenmesini sağlar.

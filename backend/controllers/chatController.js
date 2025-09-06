@@ -65,4 +65,13 @@ export default class ChatController {
             return res.status(500).json({ success: false, errorMessage: error.message });
         }
     }
+
+    async getUserChats(req, res) {
+        try {
+            const result = await chatService.getUserChats(req.user.userId);
+            return res.status(200).send(result)
+        } catch (error) {
+            return res.status(500).json(error);
+        }
+    }
 }

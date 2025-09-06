@@ -86,4 +86,9 @@ router.delete(
     chatController.deleteChat
 );
 
+router.get(
+    '/',
+    chatController.getUserChats
+);
+
 export default router
