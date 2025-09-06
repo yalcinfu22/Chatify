@@ -1,14 +1,12 @@
-const API_BASE_URL = 'http://localhost:3001'; // Backend URL'inizi buraya yazın
+const API_BASE_URL = 'http://localhost:3001';
 
-// Helper function for API calls with token
-const fetchWithToken = async (url, options = {}) => {
+export const fetchWithToken = async (url, options = {}) => {
   const token = localStorage.getItem('token');
-  
   const config = {
     ...options,
     headers: {
       ...options.headers,
-      'Authorization': token ? `Bearer ${token}` : '',
+      'token': token || '',
     },
   };
   
@@ -16,23 +14,19 @@ const fetchWithToken = async (url, options = {}) => {
   const data = await response.json();
   
   if (response.status === 401) {
-    // Token expired or invalid
     localStorage.removeItem('token');
     localStorage.removeItem('user');
-    window.location.href = '/';
+    window.location.reload();
   }
   
   return data;
 };
 
-// Login API
 export const loginAPI = async (username, password) => {
   try {
     const response = await fetch(`${API_BASE_URL}/users/login`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, password }),
     });
 
@@ -46,25 +40,16 @@ export const loginAPI = async (username, password) => {
           user: data.data.user || data.data
         }
       };
-    } else {
-      return {
-        success: false,
-        error: data.errorMessage || 'Giriş başarısız!'
-      };
     }
+    return { success: false, error: data.errorMessage || 'Login failed' };
   } catch (error) {
-    return {
-      success: false,
-      error: 'Bağlantı hatası!'
-    };
+    return { success: false, error: 'Connection error' };
   }
 };
 
-// Register API
 export const registerAPI = async (formData) => {
   try {
     const dataToSubmit = new FormData();
-    
     Object.keys(formData).forEach(key => {
       if (formData[key] !== null && formData[key] !== undefined && formData[key] !== '') {
         dataToSubmit.append(key, formData[key]);
@@ -77,42 +62,20 @@ export const registerAPI = async (formData) => {
     });
 
     const data = await response.json();
-
     if (data.success) {
       return { success: true };
-    } else {
-      let errorMessage = 'Kayıt başarısız!';
-      if (data.fields && data.fields.length > 0) {
-        errorMessage = data.fields[0].errorMessage;
-      } else if (data.errorMessage) {
-        errorMessage = data.errorMessage;
-      }
-      return { success: false, error: errorMessage };
     }
+    
+    let errorMessage = 'Registration failed';
+    if (data.fields && data.fields.length > 0) {
+      errorMessage = data.fields[0].errorMessage;
+    } else if (data.errorMessage) {
+      errorMessage = data.errorMessage;
+    }
+    return { success: false, error: errorMessage };
   } catch (error) {
-    return { success: false, error: 'Bağlantı hatası!' };
+    return { success: false, error: 'Connection error' };
   }
 };
 
-// Get Chats API
-export const getChatsAPI = async () => {
-  return fetchWithToken('/chats');
-};
-
-// Create Group API
-export const createGroupAPI = async (name) => {
-  return fetchWithToken('/chats/create-group', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ name }),
-  });
-};
-
-// Join Group API
-export const joinGroupAPI = async (groupId) => {
-  return fetchWithToken(`/chats/join/${groupId}`, {
-    method: 'POST',
-  });
-};
+export { API_BASE_URL };

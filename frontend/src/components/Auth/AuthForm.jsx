@@ -14,153 +14,99 @@ const AuthForm = ({ formType, onSuccess }) => {
     profilePicture: null,
   });
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-    setError('');
-  };
-
-  const handleFileChange = (e) => {
-    setFormData(prev => ({
-      ...prev,
-      profilePicture: e.target.files[0]
-    }));
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setIsLoading(true);
-    setError('');
-
-    // Validation
-    if (!formData.username.trim() || !formData.password.trim()) {
-      setError('Kullanıcı adı ve şifre zorunludur!');
-      setIsLoading(false);
+  const handleSubmit = async () => {
+    if (!formData.username || !formData.password) {
+      setError('Username and password are required');
       return;
     }
 
-    if (formType === 'register') {
-      if (!formData.name.trim() || !formData.surname.trim() || !formData.phone.trim()) {
-        setError('Tüm zorunlu alanları doldurun!');
-        setIsLoading(false);
-        return;
-      }
+    if (formType === 'register' && (!formData.name || !formData.surname || !formData.phone)) {
+      setError('All fields are required');
+      return;
     }
 
-    try {
-      let result;
-      if (formType === 'login') {
-        result = await login(formData.username, formData.password);
-      } else {
-        result = await register(formData);
-      }
+    setIsLoading(true);
+    setError('');
 
-      if (result.success) {
-        // Clear form
-        setFormData({
-          username: '',
-          password: '',
-          name: '',
-          surname: '',
-          phone: '',
-          profilePicture: null,
-        });
-        onSuccess && onSuccess();
-      } else {
-        setError(result.error || 'İşlem başarısız!');
+    const result = formType === 'login' 
+      ? await login(formData.username, formData.password)
+      : await register(formData);
+
+    if (result.success) {
+      if (formType === 'register') {
+        alert('Registration successful! Please login.');
+        setFormData({ username: '', password: '', name: '', surname: '', phone: '', profilePicture: null });
       }
-    } catch (error) {
-      setError('Bir hata oluştu!');
-    } finally {
-      setIsLoading(false);
+      onSuccess && onSuccess();
+    } else {
+      setError(result.error);
     }
+    setIsLoading(false);
   };
 
   return (
-    <form className="auth-form" onSubmit={handleSubmit}>
-      {error && (
-        <div className="error-message">
-          {error}
-        </div>
-      )}
+    <div className="auth-form">
+      {error && <div className="error-message">{error}</div>}
       
       <input
         type="text"
-        name="username"
-        placeholder="Kullanıcı Adı"
+        placeholder="Username"
         value={formData.username}
-        onChange={handleChange}
-        required
+        onChange={(e) => setFormData({...formData, username: e.target.value})}
+        onKeyPress={(e) => e.key === 'Enter' && formType === 'login' && handleSubmit()}
         className="form-input"
       />
-
+      
       <input
         type="password"
-        name="password"
-        placeholder="Şifre (min 6 karakter)"
+        placeholder="Password (min 6 characters)"
         value={formData.password}
-        onChange={handleChange}
-        required
-        minLength={6}
+        onChange={(e) => setFormData({...formData, password: e.target.value})}
+        onKeyPress={(e) => e.key === 'Enter' && formType === 'login' && handleSubmit()}
         className="form-input"
       />
-
+      
       {formType === 'register' && (
         <>
           <input
             type="text"
-            name="name"
-            placeholder="Ad"
+            placeholder="Name"
             value={formData.name}
-            onChange={handleChange}
-            required
+            onChange={(e) => setFormData({...formData, name: e.target.value})}
             className="form-input"
           />
-
           <input
             type="text"
-            name="surname"
-            placeholder="Soyad"
+            placeholder="Surname"
             value={formData.surname}
-            onChange={handleChange}
-            required
+            onChange={(e) => setFormData({...formData, surname: e.target.value})}
             className="form-input"
           />
-
           <input
             type="tel"
-            name="phone"
-            placeholder="Telefon"
+            placeholder="Phone"
             value={formData.phone}
-            onChange={handleChange}
-            required
+            onChange={(e) => setFormData({...formData, phone: e.target.value})}
+            onKeyPress={(e) => e.key === 'Enter' && handleSubmit()}
             className="form-input"
           />
-
-          <div className="file-input-container">
-            <label className="file-label">Profil Resmi (Opsiyonel)</label>
-            <input
-              type="file"
-              name="profilePicture"
-              onChange={handleFileChange}
-              accept="image/*"
-              className="file-input"
-            />
-          </div>
+          <input
+            type="file"
+            accept="image/*"
+            onChange={(e) => setFormData({...formData, profilePicture: e.target.files[0]})}
+            className="file-input"
+          />
         </>
       )}
-
+      
       <button
-        type="submit"
+        onClick={handleSubmit}
         disabled={isLoading}
         className="submit-button"
       >
-        {isLoading ? 'İşleniyor...' : (formType === 'login' ? 'Giriş Yap' : 'Kayıt Ol')}
+        {isLoading ? 'Loading...' : (formType === 'login' ? 'Login' : 'Register')}
       </button>
-    </form>
+    </div>
   );
 };
 

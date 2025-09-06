@@ -23,7 +23,7 @@ export const AuthProvider = ({ children }) => {
       try {
         setUser(JSON.parse(storedUser));
       } catch (error) {
-        console.error('Invalid user data in localStorage');
+        console.error('Invalid user data');
         logout();
       }
     }
@@ -31,46 +31,29 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const login = async (username, password) => {
-    try {
-      const result = await loginAPI(username, password);
-      
-      if (result.success) {
-        const { token, user } = result.data;
-        localStorage.setItem('token', token);
-        localStorage.setItem('user', JSON.stringify(user));
-        setUser(user);
-        return { success: true };
-      } else {
-        return { success: false, error: result.error };
-      }
-    } catch (error) {
-      return { success: false, error: error.message };
+    const result = await loginAPI(username, password);
+    if (result.success) {
+      localStorage.setItem('token', result.data.token);
+      localStorage.setItem('user', JSON.stringify(result.data.user));
+      setUser(result.data.user);
     }
+    return result;
   };
 
   const register = async (formData) => {
-    try {
-      const result = await registerAPI(formData);
-      return result;
-    } catch (error) {
-      return { success: false, error: error.message };
-    }
+    return await registerAPI(formData);
   };
 
   const logout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     setUser(null);
+    window.location.reload();
   };
 
-  const value = {
-    user,
-    login,
-    register,
-    logout,
-    loading,
-    isAuthenticated: !!user,
-  };
-
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={{ user, login, register, logout, loading, isAuthenticated: !!user }}>
+      {children}
+    </AuthContext.Provider>
+  );
 };
