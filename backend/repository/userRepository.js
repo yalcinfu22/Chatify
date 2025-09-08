@@ -55,10 +55,12 @@ export default class UserRepository {
 
     async removeChatFromUser(userId, chatId) {
     try {
-        await User.findByIdAndUpdate(
+        const updatedUser = await User.findByIdAndUpdate(
             userId,
-            { $pull: { chats: chatId } } // $pull operatörü diziden eleman siler.
+            { $pull: { chats: chatId } }, // $pull operatörü diziden eleman siler.
+            { new: true }
         );
+        return updatedUser;
     } catch (error) {
         console.error(`Repository Error: removeChatFromUser - ${error.message}`);
         throw new Error("Kullanıcının sohbet listesi temizlenirken bir hata oluştu.");

@@ -53,6 +53,27 @@ export default class ChatRepository {
             throw new Error("Sohbete üye eklenirken veritabanı hatası oluştu.");
         }
     }
+        /**
+     * Bir kullanıcıyı, belirli bir sohbetin hem 'members' hem de 'admins' dizilerinden kaldırır.
+     * @param {string} chatId - Güncellenecek sohbetin ID'si.
+     * @param {string} userId - Kaldırılacak kullanıcının ID'si.
+     * @returns {Promise<Chat|null>} Güncellenmiş sohbeti veya bulunamazsa null döndürür.
+     * @throws {Error} Veritabanı hatası olursa.
+     */
+    async removeUserFromChat(chatId, userId) {
+        try {
+            // Tek bir update işlemi ile hem üyelerden hem de adminlerden siliyoruz.
+            const updatedChat = await Chat.findByIdAndUpdate(
+                chatId,
+                { $pull: { members: userId, admins: userId } },
+                { new: true }
+            );
+            return updatedChat;
+        } catch (error) {
+            console.error(`Repository Error: removeUserFromChat - ${error.message}`);
+            throw new Error("Sohbet güncellenirken veritabanı hatası oluştu.");
+        }
+    }
 
     // In chatRepository
     async findById(chatId, populateOptions = null) {
@@ -120,6 +141,23 @@ export default class ChatRepository {
         return chat;
     }
 
+    async addUserBackToChat(chatId, userId, wasAdmin) {
+        try {
+            // Temel olarak kullanıcıyı üyelere ekle
+            const updateQuery = { $addToSet: { members: userId } };
+            // Eğer kullanıcı daha önce admin ise, adminler listesine de ekle
+            if (wasAdmin) {
+                updateQuery.$addToSet.admins = userId;
+            }
+            const updatedChat = await Chat.findByIdAndUpdate(chatId, updateQuery);
+            return updatedChat;
+        } catch (error) {
+                // Bu çok kritik bir hata, loglayıp fırlatalım
+                console.error(`Repository Error: addUserBackToChat (ROLLBACK) - ${error.message}`);
+                throw new Error("Geri alma işlemi sırasında veritabanı hatası oluştu.");
+            }
+    }
+
     async hideChatForUser(chatId, userId) {
         // $addToSet operatörü, userId'nin 'hiddenFor' dizisine,
         // eğer zaten mevcut değilse eklenmesini sağlar.
@@ -148,7 +186,7 @@ export default class ChatRepository {
             throw error;
         }
     }
-
+    
     async softDeleteById(chatId, userId) {
         try {
             const updatedChat = await Chat.findByIdAndUpdate( // aynı şekilde

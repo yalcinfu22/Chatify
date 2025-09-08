@@ -76,16 +76,35 @@ export default class ChatController {
     }
 
     async joinChat(req, res) {
-        const { inviteCode } = req.body;
-        const userId = req.user.userId; // authMiddleware'den gelen bilgi
-    
-        const result = await chatService.joinChat(userId, inviteCode);
-    
-        // Servisten gelen standart objeyi kullanarak cevabı gönder
-        if (!result.success) {
-            return res.status(result.statusCode).json(result);
-        }
+        try {
+            const { inviteCode } = req.body;
+            const userId = req.user.userId;
+            const result = await chatService.joinChat(userId, inviteCode);
         
-        return res.status(result.statusCode).json(result);
+            return res.status(result.statusCode).json(result);
+        } catch (error) {
+            console.error('Error in joinChat:', error);
+            return res.status(500).json({
+                success: false,
+                message: 'Internal server error'
+            });
+        }
+    }
+
+    async leaveChat(req, res) {
+        try {
+            const {chatId} = req.params;
+            const userId = req.user.userId;
+        
+            const result = await chatService.leaveChat(chatId, userId);
+        
+            return res.status(result.statusCode).json(result);
+        } catch (error) {
+            console.error('Error in leaveChat:', error);
+            return res.status(500).json({
+                success: false,
+                message: 'Internal server error'
+            });
+        }
     }
 }

@@ -227,7 +227,7 @@ export default class ChatService {
     async joinChat(userId, inviteCode) {
         let userUpdated = false;
         let chat; // chat'i try dışında tanımla
-        
+
         try {
             // Adım 1: Davet koduyla grubu bul ve temel kontrolleri yap
             chat = await chatRepository.findChatByInvitationCode(inviteCode);
@@ -237,31 +237,31 @@ export default class ChatService {
             if (chat.members.some(memberId => memberId.toString() === userId.toString())) {
                 return { success: false, statusCode: 409, errorMessage: "Zaten bu grubun bir üyesisiniz." };
             }
-        
+
             // Adım 2: ÖNCE KULLANICIYI GÜNCELLE
             const updatedUser = await userRepository.addChatToUser(userId, chat._id);
             if (!updatedUser) {
                 throw new Error("Gruba eklenecek kullanıcı bulunamadı.");
             }
             userUpdated = true;
-        
+
             // Adım 3: SONRA CHAT'İ GÜNCELLE VE AYNI ANDA POPULATE ET
             const updatedChat = await chatRepository.addUserToChatMembers(chat._id, userId, {
                 path: 'members',
                 select: 'name surname profilePicture isOnline',
                 populate: { path: 'profilePicture', select: 'url' }
             });
-            
+
             if (!updatedChat) {
                 throw new Error("Üye eklenecek sohbet bulunamadı.");
             }
-        
+
             // Adım 4: Başarılı Cevabı Dön
             return { success: true, statusCode: 200, data: updatedChat };
-            
+
         } catch (error) {
             console.error("joinChat servisinde kritik hata:", error);
-            
+
             // Rollback: Eğer user güncellenmiş ama chat güncellenememiş ise
             if (userUpdated && chat) {
                 try {
@@ -275,6 +275,64 @@ export default class ChatService {
                 success: false,
                 statusCode: 500,
                 errorMessage: "Gruba katılırken beklenmedik bir sunucu hatası oluştu."
+            };
+        }
+    }
+    async leaveChat(chatId, userId) {
+        // --- Adım 1: Mevcut Durumu Oku ve Kontrol Et ---
+        const originalChat = await chatRepository.findById(chatId);
+
+        if (!originalChat) {
+            return { success: false, statusCode: 404, errorMessage: "Bu ID'ye sahip bir sohbet bulunamadı." };
+        }
+
+        const isMember = originalChat.members.some(memberId => memberId.toString() === userId.toString());
+        if (!isMember) {
+            return { success: false, statusCode: 400, errorMessage: "Zaten bu sohbetin bir üyesi değilsiniz." };
+        }
+
+        // Geri alma işlemi için kullanıcının eski admin statüsünü kaydedelim.
+        const wasAdmin = originalChat.admins.some(adminId => adminId.toString() === userId.toString());
+
+        // --- Adım 2: Değişiklikleri Uygula (Transactional Blok) ---
+        try {
+            // İşlem A: Kullanıcıyı sohbetin üyeler/adminler listesinden kaldır.
+            await chatRepository.removeUserFromChat(chatId, userId);
+
+            // İşlem B: Sohbeti kullanıcının kişisel sohbet listesinden kaldır.
+            const updatedUser = await userRepository.removeChatFromUser(userId, chatId);
+            
+            // Eğer kullanıcı bulunamazsa bu beklenmedik bir durumdur,
+            // işlemi geri almak için bir hata fırlatalım.
+            if (!updatedUser) {
+                throw new Error(`Kullanıcı (ID: ${userId}) bulunamadı, işlem geri alınıyor.`);
+            }
+            
+            // --- Adım 3: Başarılı Sonuç ---
+            return { 
+                success: true, 
+                statusCode: 200, 
+                data: { 
+                    message: "Sohbetten başarıyla ayrıldınız.",
+                    updatedUser: updatedUser 
+                } 
+            };
+
+        } catch (error) {
+            // --- Adım 4: Hata Yakala ve Geri Al (Rollback) ---
+            // Bu blok, İşlem A veya İşlem B sırasında bir hata fırlatılırsa çalışır.
+            console.error("leaveChat servisinde kritik hata, rollback başlatılıyor:", error);
+
+            // İşlem A'nın başarılı olup olmadığını kontrol etmemize gerek yok.
+            // `addUserBackToChat` metodu zaten `$addToSet` kullandığı için,
+            // kullanıcı hiç silinmediyse bile tekrar eklemeye çalışmaz.
+            // Bu, rollback'i daha basit ve güvenli hale getirir.
+            await chatRepository.addUserBackToChat(chatId, userId, wasAdmin);
+            
+            return { 
+                success: false, 
+                statusCode: 500, 
+                errorMessage: "Sohbetten ayrılırken beklenmedik bir sunucu hatası oluştu. Değişiklikler geri alındı." 
             };
         }
     }

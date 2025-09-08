@@ -101,4 +101,11 @@ router.post(
     chatController.joinChat
 );
 
+router.delete(
+    '/:chatId/members/me',
+    [ param('chatId', 'Geçerli bir sohbet IDsi girilmelidir.').isMongoId() ],
+    validationController.validateRequest,
+    chatController.leaveChat
+)
+
 export default router
