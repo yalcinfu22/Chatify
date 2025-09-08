@@ -103,7 +103,6 @@ export default class ChatService {
         }
         // --- Adım 2: Oluşturulan Grubu Kullanıcıya Ekleme ---
         try {
-            await userRepository.addChatToUser(creatorId, newGroup._id);
             // Her şey başarılı. Sonucu populate edip gönderelim.
             const populatedGroup = await newGroup.populate('members', 'name surname username profilePicture');
             return { success: true, data: populatedGroup };
@@ -216,6 +215,67 @@ export default class ChatService {
         } catch (error) {
             console.error("getChats servisinde hata:", error);
             return { success: false, errorMessage: "Sohbetler getirilirken bir hata oluştu." };
+        }
+    }
+
+    /**
+     * Bir kullanıcının davet kodu ile bir gruba katılmasını sağlar.
+     * @param {string} userId - Katılmak isteyen kullanıcının ID'si.
+     * @param {string} inviteCode - Gruba ait davet kodu.
+     * @returns {Promise<object>} Standart {success, statusCode, ...} formatında cevap objesi.
+     */
+    async joinChat(userId, inviteCode) {
+        let userUpdated = false;
+        let chat; // chat'i try dışında tanımla
+        
+        try {
+            // Adım 1: Davet koduyla grubu bul ve temel kontrolleri yap
+            chat = await chatRepository.findChatByInvitationCode(inviteCode);
+            if (!chat) {
+                return { success: false, statusCode: 404, errorMessage: "Bu davet koduna sahip bir grup bulunamadı." };
+            }
+            if (chat.members.some(memberId => memberId.toString() === userId.toString())) {
+                return { success: false, statusCode: 409, errorMessage: "Zaten bu grubun bir üyesisiniz." };
+            }
+        
+            // Adım 2: ÖNCE KULLANICIYI GÜNCELLE
+            const updatedUser = await userRepository.addChatToUser(userId, chat._id);
+            if (!updatedUser) {
+                throw new Error("Gruba eklenecek kullanıcı bulunamadı.");
+            }
+            userUpdated = true;
+        
+            // Adım 3: SONRA CHAT'İ GÜNCELLE VE AYNI ANDA POPULATE ET
+            const updatedChat = await chatRepository.addUserToChatMembers(chat._id, userId, {
+                path: 'members',
+                select: 'name surname profilePicture isOnline',
+                populate: { path: 'profilePicture', select: 'url' }
+            });
+            
+            if (!updatedChat) {
+                throw new Error("Üye eklenecek sohbet bulunamadı.");
+            }
+        
+            // Adım 4: Başarılı Cevabı Dön
+            return { success: true, statusCode: 200, data: updatedChat };
+            
+        } catch (error) {
+            console.error("joinChat servisinde kritik hata:", error);
+            
+            // Rollback: Eğer user güncellenmiş ama chat güncellenememiş ise
+            if (userUpdated && chat) {
+                try {
+                    await userRepository.removeChatFromUser(userId, chat._id);
+                } catch (rollbackError) {
+                    console.error("Rollback hatası:", rollbackError);
+                }
+            }
+        
+            return {
+                success: false,
+                statusCode: 500,
+                errorMessage: "Gruba katılırken beklenmedik bir sunucu hatası oluştu."
+            };
         }
     }
 }

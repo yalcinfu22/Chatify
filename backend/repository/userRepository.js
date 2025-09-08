@@ -26,21 +26,17 @@ export default class UserRepository {
         const result = await user.save(); 
         return result;
     }
-    async addChatToUser(userId, chatId) {
+    async addChatToUser(userId, chatId) { // may return null or throw an interenal error (service must detect 404 "null case") 
         try {
-            const result = await User.findByIdAndUpdate(
-                userId, 
-                { $addToSet: { chats: chatId } },  // Duplicate check
-                { new: true }  // Güncellenmiş user'ı döndür
+            const updatedUser = await User.findByIdAndUpdate(
+                userId,
+                { $addToSet: { chats: chatId } },
+                { new: true }
             );
-            
-            if (!result) {
-                throw new Error("User not found");
-            }
-            
-            return result;
+            return updatedUser;
         } catch (error) {
-            throw error;
+            console.error(`Repository Error: addChatToUser - ${error.message}`);
+            throw new Error("Kullanıcının sohbet listesi güncellenirken veritabanı hatası oluştu.");
         }
     }
     async addChatToUsers(userIds, chatId) {
@@ -56,6 +52,19 @@ export default class UserRepository {
             throw error;
         }
     }
+
+    async removeChatFromUser(userId, chatId) {
+    try {
+        await User.findByIdAndUpdate(
+            userId,
+            { $pull: { chats: chatId } } // $pull operatörü diziden eleman siler.
+        );
+    } catch (error) {
+        console.error(`Repository Error: removeChatFromUser - ${error.message}`);
+        throw new Error("Kullanıcının sohbet listesi temizlenirken bir hata oluştu.");
+        }
+    }
+
     async updateProfilePicture(userId, image_id) {
         const updatedUser = await User.findByIdAndUpdate(
             userId,

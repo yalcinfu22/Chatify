@@ -18,13 +18,56 @@ export default class ChatRepository {
         }
     }
 
-    async findById(chatId) {
+    async findChatByInvitationCode(inviteCode) {
         try {
-            const chat = await Chat.findById(chatId)
-            return chat
+            const chat = await Chat.findOne({ 
+                inviteCode: inviteCode, 
+                isDeleted: false // extra, invite code is unique
+            });
+            return chat;
         } catch (error) {
-            console.log("Error in findById repository", error)
-            throw error
+            console.error(`Repository Error: findChatByInvitationCode - ${error.message}`);
+            // Hatayı bir üst katmanın (Service) yakalaması için tekrar fırlatıyoruz.
+            throw new Error("Davet kodu ile sohbet aranırken veritabanı hatası oluştu.");
+        }
+    }
+
+
+    async addUserToChatMembers(chatId, userId, populateOptions = null) {
+        try {
+            let query = Chat.findByIdAndUpdate(
+                chatId,
+                { $addToSet: { members: userId } },
+                { new: true } // Güncellenmiş dökümanı döndür
+            );
+
+            // Eğer populate options varsa ekle
+            if (populateOptions) {
+                query = query.populate(populateOptions); // bu kısım db'de yapılmalı
+            }
+
+            const updatedChat = await query;
+            return updatedChat;
+        } catch (error) {
+            console.error(`Repository Error: addUserToChatMembers - ${error.message}`);
+            throw new Error("Sohbete üye eklenirken veritabanı hatası oluştu.");
+        }
+    }
+
+    // In chatRepository
+    async findById(chatId, populateOptions = null) {
+        try {
+            let query = Chat.findById(chatId);
+
+            if (populateOptions) {
+                query = query.populate(populateOptions);
+            }
+
+            const chat = await query;
+            return chat;
+        } catch (error) {
+            console.log("Error in findById repository", error);
+            throw error;
         }
     }
 

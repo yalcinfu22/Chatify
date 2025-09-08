@@ -74,4 +74,18 @@ export default class ChatController {
             return res.status(500).json(error);
         }
     }
+
+    async joinChat(req, res) {
+        const { inviteCode } = req.body;
+        const userId = req.user.userId; // authMiddleware'den gelen bilgi
+    
+        const result = await chatService.joinChat(userId, inviteCode);
+    
+        // Servisten gelen standart objeyi kullanarak cevabı gönder
+        if (!result.success) {
+            return res.status(result.statusCode).json(result);
+        }
+        
+        return res.status(result.statusCode).json(result);
+    }
 }

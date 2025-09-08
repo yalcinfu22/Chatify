@@ -94,4 +94,11 @@ router.get(
     chatController.getUserChats
 );
 
+router.post(
+    "/join",
+    [ check("inviteCode", "Davet kodu zorunludur.").notEmpty().isString() ],
+    validationController.validateRequest,
+    chatController.joinChat
+);
+
 export default router
