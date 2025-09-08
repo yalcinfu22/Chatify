@@ -127,7 +127,6 @@ export default class ChatService {
             if (!chat) {
                 return { success: false, statusCode: 404, errorMessage: "Sohbet bulunamadı." };
             }
-
             // Adım 2: Sohbetin Tipine Göre Karar Ver
             if (chat.isGroupChat) {
                 // Senaryo A: Bu bir grup sohbeti
@@ -148,13 +147,14 @@ export default class ChatService {
         if (!canUserManageGroup(chat,userId)) {
             return { success: false, statusCode: 403, errorMessage: "Bu grubu silme yetkiniz yok." };
         }
-
         // Adım 3b: Varsa, grubun resmini soft delete yap
         if (chat.groupPicture) {
             // imageService'e bu işi delege ediyoruz.
-            await imageService.softDeleteById(chat.groupPicture, userId);
+            const result = await imageService.softDeleteById(chat.groupPicture, userId);
+            if(!result.success) { // ++ resmin bulunamadığını döndürüyoruz
+                return result;
+            }
         }
-
         // Adım 3c: Sohbeti tüm üyelerin 'chats' dizisinden kaldır
         await userRepository.removeChatFromAllUsers(chat._id);
 

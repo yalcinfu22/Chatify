@@ -90,9 +90,15 @@ export default class UserRepository {
     async removeChatFromAllUsers(chatId) {
         // 'chats' dizisi 'chatId'yi içeren tüm kullanıcıları bul ve
         // $pull operatörü ile o elemanı diziden çek/kaldır.
-        return await User.updateMany(
+        try {
+            return await User.updateMany( // ? bu adam başarısız olursa ne döndürüyor direkt atıyor mu
             { chats: chatId },
             { $pull: { chats: chatId } }
         );
+        } catch (error) {
+            console.log("Error in removeChatFromAllUsers repository")
+            throw error
+        }
+
     }
 }

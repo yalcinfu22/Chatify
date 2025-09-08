@@ -80,7 +80,7 @@ export const profileUpload = multer({
     storage: profileStorage,
     fileFilter: fileFilter,
     limits: {
-        fileSize: 5 * 1024 * 1024 // 5MB limit
+        fileSize: 15 * 1024 * 1024 // 15MB limit
     }
 });
 
@@ -88,7 +88,7 @@ export const groupUpload = multer({
     storage: groupStorage,
     fileFilter: fileFilter,
     limits: {
-        fileSize: 5 * 1024 * 1024 // 5MB limit
+        fileSize: 15 * 1024 * 1024 // 15MB limit
     }
 });
 

@@ -32,22 +32,25 @@ router.post(
       .custom((value) => {
         // Eğer sadece rakamlardan oluşuyorsa -> telefon numarası gibi düşün
         const isNumeric = /^[0-9+]+$/.test(value);
-
         if (isNumeric) {
           // Telefon numarası doğrulaması (express-validator'dan)
           if (!isMobilePhone(value)) {
             throw new Error("Geçerli bir telefon numarası giriniz.");
           }
         } else {
-          // Username doğrulaması (örnek kural: harf, rakam, alt çizgi, 3-20 uzunluk)
-          if (!/^[a-zA-Z0-9_]{3,20}$/.test(value)) {
-            throw new Error("Geçerli bir kullanıcı adı giriniz.");
+          // Username doğrulaması - boşluk da dahil olmak üzere daha esnek
+          // Sadece uzunluk kontrolü yapıp, çok özel karakterleri engelleyelim
+          if (value.length < 3 || value.length > 30) {
+            throw new Error("Kullanıcı adı 3-30 karakter arasında olmalıdır.");
+          }
+          
+          // Sadece zararlı karakterleri engelleyelim (opsiyonel)
+          if (/[<>\"'&]/.test(value)) {
+            throw new Error("Kullanıcı adında geçersiz karakterler bulunuyor.");
           }
         }
-
         return true;
-      }
-    ),
+      }),
     check(["members"]).not().exists(),
     check(["latestMessage"]).not().exists(),
     check(["isGroupChat"]).not().exists(),

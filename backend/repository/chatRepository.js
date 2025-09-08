@@ -6,12 +6,16 @@ export default class ChatRepository {
         // Bu sorgu, veritabanında şu koşulları sağlayan bir döküman arar:
         // 1. Bir grup sohbeti OLMAMALI (isGroupChat: false).
         // 2. 'members' dizisi, HEM userId1'i HEM DE userId2'yi İÇERMELİ ($all operatörü).
-        const chat = await Chat.findOne({
-            isGroupChat: false,
-            members: { $all: [userId1, userId2], $size: 2 }
-        });
-
-        return chat;
+        try {
+            const chat = await Chat.findOne({
+                isGroupChat: false,
+                members: { $all: [userId1, userId2], $size: 2 }
+            });
+            return chat;
+        } catch (error) {
+            console.log("Error in findDirectChatBetweenUsers repository", error)
+            throw error 
+        }
     }
 
     async findById(chatId) {
@@ -26,6 +30,7 @@ export default class ChatRepository {
 
     // repository/chatRepository.js
     async findUserChats(userId) {
+        try {
         const chats = await Chat.find({
             members: userId,
             isDeleted: false,
@@ -46,8 +51,12 @@ export default class ChatRepository {
             select: 'content sender createdAt',
             populate: { path: 'sender', select: 'name' }
         });
-
-        return chats;
+            return chats;
+        }
+        catch(error) {
+            console.log("Error in findUserChats repository", error)
+            throw error
+        }
     }
 
     // repository/chatRepository.js
@@ -98,7 +107,8 @@ export default class ChatRepository {
     }
 
     async softDeleteById(chatId, userId) {
-        const updatedChat = await Chat.findByIdAndUpdate(
+        try {
+            const updatedChat = await Chat.findByIdAndUpdate( // aynı şekilde
             chatId,
             { 
                 $set: { 
@@ -108,7 +118,11 @@ export default class ChatRepository {
             },
             { new: true }
         );
-        return updatedChat;
+            return updatedChat;
+        } catch (error) {
+            console.error("Error in softDeleteById repository:", error);
+            throw error;
+        }
     }
 
     /**
