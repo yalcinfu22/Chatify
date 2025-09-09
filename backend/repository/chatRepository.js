@@ -53,13 +53,7 @@ export default class ChatRepository {
             throw new Error("Sohbete üye eklenirken veritabanı hatası oluştu.");
         }
     }
-        /**
-     * Bir kullanıcıyı, belirli bir sohbetin hem 'members' hem de 'admins' dizilerinden kaldırır.
-     * @param {string} chatId - Güncellenecek sohbetin ID'si.
-     * @param {string} userId - Kaldırılacak kullanıcının ID'si.
-     * @returns {Promise<Chat|null>} Güncellenmiş sohbeti veya bulunamazsa null döndürür.
-     * @throws {Error} Veritabanı hatası olursa.
-     */
+
     async removeUserFromChat(chatId, userId) {
         try {
             // Tek bir update işlemi ile hem üyelerden hem de adminlerden siliyoruz.
@@ -183,6 +177,21 @@ export default class ChatRepository {
             // Veritabanı seviyesinde bir hata olursa (örn: bağlantı kopması, validasyon hatası),
             // hatayı loglayıp bir üst katmana (Service) fırlatıyoruz.
             console.error("Error in createNewChat repository:", error);
+            throw error;
+        }
+    }
+
+
+    async updateChatLatest(chatId, latestMessageId, session = null) {
+        try {
+            const updatedChat = await Chat.findByIdAndUpdate(
+                chatId,
+                { latestMessage: latestMessageId }, // Artık updatedAt otomatik güncelleniyor, time göndermeye gerek yok
+                { new: true, session } // session'ı buraya ekliyoruz
+            );
+            return updatedChat;
+        } catch (error) {
+            console.error("updateChatLatest repository error:", error);
             throw error;
         }
     }

@@ -3,11 +3,10 @@ import test from '../utils/test.js';
 import Image from '../models/imageModel.js'; 
 
 export default class ImageRepository {
-    async saveImage(imageInfo) {
-        const newImage = new Image(imageInfo); // ← Yeni Image instance oluştur
-        const result = await newImage.save();  // ← Sonra kaydet
-        console.log({result})
-        return result;    
+    async saveImage(imageInfo, session = null) {
+        const newImage = new Image(imageInfo);
+        // save() metodu bir 'session' objesi alabilir.
+        return await newImage.save({ session });
     }
     async softDeleteById(imageId, userId) {
         const updatedImage = await Image.findByIdAndUpdate(

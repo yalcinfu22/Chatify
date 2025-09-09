@@ -14,7 +14,10 @@ const authorizationController = new AuthorizationController();
 import ChatController from "../controllers/chatController.js";
 const chatController = new ChatController();
 
-import { groupUpload } from "../middlewares/upload.js";
+import MessageController from "../controllers/messageController.js";
+const messageController = new MessageController();
+
+import { groupUpload, messageUpload } from "../middlewares/upload.js";
 
 import test from "../utils/test.js";
 
@@ -51,14 +54,6 @@ router.post(
         }
         return true;
       }),
-    check(["members"]).not().exists(),
-    check(["latestMessage"]).not().exists(),
-    check(["isGroupChat"]).not().exists(),
-    check(["inviteCode"]).not().exists(),
-    check(["admins"]).not().exists(),
-    check(["creator"]).not().exists(),
-    check(["isDeleted"]).not().exists(),
-    check(["deletedBy"]).not().exists(),
   ],
   validationController.validateRequest,
   chatController.createDirectChat
@@ -69,14 +64,6 @@ router.post(
   groupUpload.single('groupPicture'),
   [
     check(["name"]).exists().notEmpty().isString(),
-    check(["members"]).not().exists(),
-    check(["latestMessage"]).not().exists(),
-    check(["isGroupChat"]).not().exists(),
-    check(["inviteCode"]).not().exists(),
-    check(["admins"]).not().exists(),
-    check(["creator"]).not().exists(),
-    check(["isDeleted"]).not().exists(),
-    check(["deletedBy"]).not().exists(),
   ],
   validationController.validateRequest,
   chatController.createGroupChat
@@ -106,6 +93,14 @@ router.delete(
     [ param('chatId', 'Geçerli bir sohbet IDsi girilmelidir.').isMongoId() ],
     validationController.validateRequest,
     chatController.leaveChat
+)
+
+router.post(
+    "/:chatId/messages",
+    messageUpload.single('attachment'),
+    [ param('chatId', 'Geçerli bir sohbet IDsi girilmelidir.').isMongoId() ],
+    validationController.validateRequest,
+    messageController.sendMessage
 )
 
 export default router

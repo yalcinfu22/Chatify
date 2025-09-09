@@ -41,5 +41,7 @@ const messageSchema = mongoose.Schema({
 }, { timestamps: true }
 );
 
+messageSchema.index({ chat: 1, createdAt: -1 }); // chat'e göre olan sorguları hızlandırmak için gerekli
+
 const Message = mongoose.model('Message', messageSchema);
 export default Message;

@@ -33,6 +33,20 @@ const groupStorage = multer.diskStorage({
     }
 });
 
+// Storage configuration for chat messages
+const messageStorage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        const uploadPath = path.join(__dirname, '../uploads/chat-messages');
+        cb(null, uploadPath);
+    },
+    filename: function (req, file, cb) {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        const extension = path.extname(file.originalname);
+        cb(null, `profile_${uniqueSuffix}${extension}`);
+    }
+});
+
+
 
 // FILE TYPE BELİRLEME FONKSİYONU
 const determineFileType = (mimetype) => {
@@ -92,4 +106,12 @@ export const groupUpload = multer({
     }
 });
 
-export default { profileUpload, groupUpload };
+export const messageUpload = multer({
+    storage: messageStorage,
+    fileFilter: fileFilter,
+    limits: {
+        fileSize: 15 * 1024 * 1024 // 15MB limit
+    }
+});
+
+export default { profileUpload, groupUpload, messageUpload };
