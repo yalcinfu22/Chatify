@@ -12,6 +12,10 @@ const chatSchema = mongoose.Schema(
             type: mongoose.Schema.Types.ObjectId,
             ref: 'Message'
         },
+        latestMessageTime: {
+            type: Date,
+            default: null
+        },
         hiddenFor: [{
             type: mongoose.Schema.Types.ObjectId,
             ref: 'User'

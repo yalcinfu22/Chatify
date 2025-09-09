@@ -92,6 +92,8 @@ export default class ChatService {
                 ...(newImage && { groupPicture: newImage._id }) // Resim varsa ekle
             };
             newGroup = await chatRepository.createNewChat(groupData);
+            await userRepository.addChatToUser(creatorId, newGroup._id)
+
         } catch (error) {
             // Bu catch bloğu, SADECE veritabanına yazarken oluşan beklenmedik hataları yakalar.
             // (örn: DB bağlantısı koptu)
@@ -142,38 +144,34 @@ export default class ChatService {
     }
 
     async #deleteGroupChat(chat, userId) {
-        // Adım 3a: Yetki Kontrolü (Kullanıcı admin mi?)
         if (!canUserManageGroup(chat,userId)) {
             return { success: false, statusCode: 403, errorMessage: "Bu grubu silme yetkiniz yok." };
         }
-        // Adım 3b: Varsa, grubun resmini soft delete yap
         if (chat.groupPicture) {
-            // imageService'e bu işi delege ediyoruz.
             const result = await imageService.softDeleteById(chat.groupPicture, userId);
-            if(!result.success) { // ++ resmin bulunamadığını döndürüyoruz
+            if(!result.success) { 
                 return result;
             }
         }
-        // Adım 3c: Sohbeti tüm üyelerin 'chats' dizisinden kaldır
         await userRepository.removeChatFromAllUsers(chat._id);
 
-        // Adım 3d: Sohbetin kendisini soft delete yap
+        // Tüm userları chatten silme eklenebilir
         await chatRepository.softDeleteById(chat._id, userId);
 
         return { success: true, statusCode: 200 };
     }
 
     async #deleteDirectChat(chat, userId) {
-        // Yetki Kontrolü: Kullanıcı bu sohbetin bir üyesi mi?
+
         if (!isUserMemberOfChat(chat,userId)) {
             return { success: false, statusCode: 403, errorMessage: "Bu sohbete erişim yetkiniz yok." };
         }
 
-        // Adım 3e: Sohbeti kullanıcı için "gizle"
         await chatRepository.hideChatForUser(chat._id, userId);
         
         return { success: true, statusCode: 200, errorMessage: "Sohbet listenizden kaldırıldı." };
     }
+
     async getUserChats(userId) {
         try {
             const userChats = await chatRepository.findUserChats(userId);
@@ -199,14 +197,12 @@ export default class ChatService {
                     }
                 }
 
-                // Bir obje oluşturup geri döndür.
-                // Eskiden '...chatObject' ile tüm alanı yolluyorduk, şimdi ise seçerek yolluyoruz.
                 return {
                     _id: chatObject._id,
                     isGroupChat: chatObject.isGroupChat,
                     displayName,
                     displayPicture,
-                    latestMessage: chatObject.latestMessage // Populate edilmiş haliyle
+                    latestMessage: chatObject.latestMessage
                 };
             });
 
@@ -218,18 +214,11 @@ export default class ChatService {
         }
     }
 
-    /**
-     * Bir kullanıcının davet kodu ile bir gruba katılmasını sağlar.
-     * @param {string} userId - Katılmak isteyen kullanıcının ID'si.
-     * @param {string} inviteCode - Gruba ait davet kodu.
-     * @returns {Promise<object>} Standart {success, statusCode, ...} formatında cevap objesi.
-     */
     async joinChat(userId, inviteCode) {
         let userUpdated = false;
-        let chat; // chat'i try dışında tanımla
+        let chat;
 
         try {
-            // Adım 1: Davet koduyla grubu bul ve temel kontrolleri yap
             chat = await chatRepository.findChatByInvitationCode(inviteCode);
             if (!chat) {
                 return { success: false, statusCode: 404, errorMessage: "Bu davet koduna sahip bir grup bulunamadı." };
@@ -238,14 +227,12 @@ export default class ChatService {
                 return { success: false, statusCode: 409, errorMessage: "Zaten bu grubun bir üyesisiniz." };
             }
 
-            // Adım 2: ÖNCE KULLANICIYI GÜNCELLE
             const updatedUser = await userRepository.addChatToUser(userId, chat._id);
             if (!updatedUser) {
                 throw new Error("Gruba eklenecek kullanıcı bulunamadı.");
             }
             userUpdated = true;
 
-            // Adım 3: SONRA CHAT'İ GÜNCELLE VE AYNI ANDA POPULATE ET
             const updatedChat = await chatRepository.addUserToChatMembers(chat._id, userId, {
                 path: 'members',
                 select: 'name surname profilePicture isOnline',
@@ -256,13 +243,11 @@ export default class ChatService {
                 throw new Error("Üye eklenecek sohbet bulunamadı.");
             }
 
-            // Adım 4: Başarılı Cevabı Dön
             return { success: true, statusCode: 200, data: updatedChat };
 
         } catch (error) {
             console.error("joinChat servisinde kritik hata:", error);
 
-            // Rollback: Eğer user güncellenmiş ama chat güncellenememiş ise
             if (userUpdated && chat) {
                 try {
                     await userRepository.removeChatFromUser(userId, chat._id);
@@ -279,7 +264,7 @@ export default class ChatService {
         }
     }
     async leaveChat(chatId, userId) {
-        // --- Adım 1: Mevcut Durumu Oku ve Kontrol Et ---
+
         const originalChat = await chatRepository.findById(chatId);
 
         if (!originalChat) {
@@ -291,24 +276,49 @@ export default class ChatService {
             return { success: false, statusCode: 400, errorMessage: "Zaten bu sohbetin bir üyesi değilsiniz." };
         }
 
-        // Geri alma işlemi için kullanıcının eski admin statüsünü kaydedelim.
+        // ÖNEMLİ: SADECE GRUP CHATLERİNDEN AYRILMAK MÜMKÜN
+        if (!originalChat.isGroupChat) {
+            return { 
+                success: false, 
+                statusCode: 400,
+                errorMessage: "Birebir sohbetlerden 'ayrılma' işlemi yapılamaz. Sohbeti listenizden kaldırmak için silme ('DELETE /chats/:chatId') işlemini kullanın." 
+            };
+        }
+
         const wasAdmin = originalChat.admins.some(adminId => adminId.toString() === userId.toString());
 
-        // --- Adım 2: Değişiklikleri Uygula (Transactional Blok) ---
         try {
-            // İşlem A: Kullanıcıyı sohbetin üyeler/adminler listesinden kaldır.
-            await chatRepository.removeUserFromChat(chatId, userId);
 
-            // İşlem B: Sohbeti kullanıcının kişisel sohbet listesinden kaldır.
+            const updatedChat = await chatRepository.removeUserFromChat(chatId, userId);
+
             const updatedUser = await userRepository.removeChatFromUser(userId, chatId);
             
-            // Eğer kullanıcı bulunamazsa bu beklenmedik bir durumdur,
-            // işlemi geri almak için bir hata fırlatalım.
             if (!updatedUser) {
                 throw new Error(`Kullanıcı (ID: ${userId}) bulunamadı, işlem geri alınıyor.`);
             }
             
-            // --- Adım 3: Başarılı Sonuç ---
+            // ÖNEMLİ: Eğer son admin gruptan çıkacaksa grup dağıtılmalı
+            if (originalChat.isGroupChat && wasAdmin && updatedChat.admins.length === 0) {
+                
+                console.log(`Grup ${chatId} son admin ayrıldığı için dağıtılıyor...`);
+
+                await userRepository.removeChatFromAllUsers(chatId);
+
+                await chatRepository.softDeleteById(chatId, userId);
+
+                return { 
+                    success: true, 
+                    statusCode: 200, 
+                    data: { 
+                        message: "Gruptan başarıyla ayrıldınız ve son yönetici olduğunuz için grup dağıtıldı.",
+                        updatedUser: updatedUser,
+                        groupDissolved: true 
+                    } 
+                };
+
+                // NOT: Son admin ayrıldığında kalan kullanıcılar hala members'ta kalıyor şimdilik
+            }
+
             return { 
                 success: true, 
                 statusCode: 200, 
@@ -319,14 +329,9 @@ export default class ChatService {
             };
 
         } catch (error) {
-            // --- Adım 4: Hata Yakala ve Geri Al (Rollback) ---
             // Bu blok, İşlem A veya İşlem B sırasında bir hata fırlatılırsa çalışır.
             console.error("leaveChat servisinde kritik hata, rollback başlatılıyor:", error);
 
-            // İşlem A'nın başarılı olup olmadığını kontrol etmemize gerek yok.
-            // `addUserBackToChat` metodu zaten `$addToSet` kullandığı için,
-            // kullanıcı hiç silinmediyse bile tekrar eklemeye çalışmaz.
-            // Bu, rollback'i daha basit ve güvenli hale getirir.
             await chatRepository.addUserBackToChat(chatId, userId, wasAdmin);
             
             return { 

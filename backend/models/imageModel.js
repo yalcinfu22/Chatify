@@ -17,7 +17,7 @@ const imageSchema = new mongoose.Schema({
     // Bu, ileride farklı dosya tiplerini yönetmeni kolaylaştırır.
     fileType: {
         type: String,
-        enum: ['image', 'video', 'gif'],
+        enum: ['image', 'video', 'gif', 'file'],
         default: 'image'
     },
     isDeleted: {

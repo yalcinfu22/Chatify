@@ -40,7 +40,7 @@ router.post(
         } else {
           // Username doğrulaması - boşluk da dahil olmak üzere daha esnek
           // Sadece uzunluk kontrolü yapıp, çok özel karakterleri engelleyelim
-          if (value.length < 3 || value.length > 30) {
+          if (value.length < 1 || value.length > 30) {
             throw new Error("Kullanıcı adı 3-30 karakter arasında olmalıdır.");
           }
           
