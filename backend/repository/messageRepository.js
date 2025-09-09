@@ -21,4 +21,21 @@ export default class MessageRepository {
             return error
         }
     }
+
+    async softDeleteMessage(messageId, userId, session = null) {
+        if (!messageId || !userId) {
+            return null
+        }
+        try {
+            const deletedMessage = await Message.findOneAndUpdate(
+                {_id: messageId, sender: userId},
+                {isDeleted: true},
+                {new: true, session}
+            )
+            return deletedMessage
+        } catch (error) {
+            console.log("Error in softDeleteMessage repository")
+            throw error
+        }
+    }
 }

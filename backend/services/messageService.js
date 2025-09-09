@@ -104,4 +104,37 @@ export default class MessageService {
             session.endSession();
         }
     }
+
+    async deleteMessage(messageId, userId) { // adminler de silebilecek silinen mesaj'ın deletedBy'ı değişecek
+        const session = await mongoose.startSession()
+        try {
+            session.startTransaction()
+            const softDeletedMessage = await messageRepository.softDeleteMessage(messageId, userId, session)
+            if(!softDeletedMessage) {
+                console.log("Message can not be deleted")
+                return {
+                    success: false,
+                    errorMessage: "Message can not be deleted",
+                    statusCode: 404 // actually a bad guy can also try to delete a message, but this case is most prbably wont happen in our implementation
+                }
+            }
+            await session.commitTransaction()
+            return {
+                success: true,
+                statusCode: 200,
+                message: "Message deleted",
+                data: softDeletedMessage
+            }
+        } catch (error) {
+            session.abortTransaction()
+            return {
+                success: false,
+                statusCode: 500,
+                errorMessage: error,
+                message: "Internal server error in deleteMessage service"
+            }
+        } finally {
+            session.endSession()
+        }
+    }
 }

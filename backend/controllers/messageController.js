@@ -18,4 +18,19 @@ export default class MessageController {
             });  
         }
     }
+
+    async deleteMessage(req, res) {
+        try {
+            const {userId} = req.user
+            const {messageId} = req.params
+            const result = await messageService.deleteMessage(messageId, userId)
+            return res.status(result.statusCode).json(result)
+        } catch (error) {
+            console.error('Error in deleteMessage:', error);
+            return res.status(500).json({
+                success: false,
+                message: 'Internal server error'
+            });  
+        }
+    }
 }

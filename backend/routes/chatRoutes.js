@@ -103,4 +103,11 @@ router.post(
     messageController.sendMessage
 )
 
+router.delete(
+    "/:chatId/messages/:messageId",
+    [ param('chatId', 'Geçerli bir sohbet IDsi girilmelidir.').isMongoId() ],
+    [ param('messageId', 'Geçerli bir mesaj IDsi girilmelidir.').isMongoId() ],
+    validationController.validateRequest,
+    messageController.deleteMessage
+)
 export default router
