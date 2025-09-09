@@ -41,7 +41,7 @@ export default class MessageService {
                 session.endSession();
                 return {
                     success: false,
-                    statusCode: 401,
+                    statusCode: 403, // FORBIDDEN
                     errorMessage: "User can not send a message to this chat"
                 }
             }
@@ -135,6 +135,38 @@ export default class MessageService {
             }
         } finally {
             session.endSession()
+        }
+    }
+
+    async getLatestMessages(userId, chatId) {
+        try {
+            const targetChat = await findNonDeletedById(chatId)
+            if(!isUserMemberOfChat(targetChat, userId)) {
+                console.log(`${userId} attempted to get messages from another chat`)
+                return {
+                    success: false,
+                    statusCode: 403, // FORBIDDEN
+                    errorMessage: `${userId} attempted to get messages from another chat`,
+                }
+            }
+
+            const messages = await messageRepository.getLatestMessages(chatId);
+            
+            return {
+                success: true,
+                statusCode: 200,
+                data: {
+                    messages: messages,
+                    count: messages.length
+                }
+            };
+        } catch (error) {
+            console.error('MessageService getLatestMessages error:', error);
+            return {
+                success: false,
+                statusCode: 500,
+                errorMessage: 'Failed to fetch messages'
+            };
         }
     }
 }

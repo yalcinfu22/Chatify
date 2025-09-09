@@ -38,4 +38,27 @@ export default class MessageRepository {
             throw error
         }
     }
+
+    async getLatestMessages(chatId) {
+        try {
+            const messages = await Message
+                .find({ chat: chatId })
+                .select('content contentType attachment sender isDeleted updatedAt')
+                .populate({
+                    path: 'attachment',
+                    select: 'url fileType isDeleted',
+                    // Don't filter deleted attachments here, let frontend handle it
+                })
+                .populate({
+                    path: 'sender',
+                    select: 'name surname'
+                })
+                .sort({ createdAt: -1 })
+                .limit(50)
+                .lean();
+            return messages;
+        } catch (error) {
+            throw new Error(`Failed to fetch all messages: ${error.message}`);
+        }
+    }
 }

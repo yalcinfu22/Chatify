@@ -9,7 +9,12 @@ export default class MessageController {
             const {content, contentType} = req.body
             
             const result = await messageService.sendMessage(chatId, userId, req.file, content, contentType)
-            return res.status(result.statusCode).json(result)
+
+            if(!result.success) {
+                return res.status(result.statusCode).json(result.errorMessage)
+            }
+            return res.status(result.statusCode).json(result.data)
+            
         } catch (error) {
             console.error('Error in sendMessage:', error);
             return res.status(500).json({
@@ -24,7 +29,10 @@ export default class MessageController {
             const {userId} = req.user
             const {messageId} = req.params
             const result = await messageService.deleteMessage(messageId, userId)
-            return res.status(result.statusCode).json(result)
+            if(!result.success) {
+                return res.status(result.statusCode).json(result.errorMessage)
+            }
+            return res.status(result.statusCode).json(result.data)
         } catch (error) {
             console.error('Error in deleteMessage:', error);
             return res.status(500).json({
@@ -33,4 +41,23 @@ export default class MessageController {
             });  
         }
     }
+
+    async getLatestMessages(req, res) {
+        try {
+            const {chatId} = req.params
+            const {userId} = req.body
+            const result = await messageService.getLatestMessages(userId, chatId)
+            if(!result.success) {
+                return res.status(result.statusCode).json(result.errorMessage)
+            }
+            return res.status(result.statusCode).json(result.data)
+        } catch (error) {
+            console.error('Error in getMessages:', error);
+            return res.status(500).json({
+                success: false,
+                message: 'Internal server error'
+            });  
+        }
+    }
+
 }
