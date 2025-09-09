@@ -14,17 +14,37 @@ import test from '../utils/test.js';
 
 import mongoose from 'mongoose'; // transcation için
 import fs from 'fs'; // multer rollback için
+import { isUserMemberOfChat } from '../helpers/permission.js';
 
 export default class MessageService {
 
     async sendMessage(chatId, userId, file, content, contentType) {
         // 1. Transaction için bir oturum (session) başlat.
         const session = await mongoose.startSession();
-
         try {
             // 2. Transaction'ı başlat.
             session.startTransaction();
+            
+            const chat = await chatRepository.findNonDeletedById(chatId, {session})
+            if(!chat) {
+                    await session.abortTransaction();
+                    session.endSession();
+                    return {
+                        success: false,
+                        statusCode: 404,
+                        errorMessage: "Chat not found",
+                    }
+            }
 
+            if(!isUserMemberOfChat(chat, userId)) {
+                await session.abortTransaction();
+                session.endSession();
+                return {
+                    success: false,
+                    statusCode: 401,
+                    errorMessage: "User can not send a message to this chat"
+                }
+            }
             let attachmentId = null;
 
             // Adım A: Eğer dosya varsa, Image oluştur (transaction içinde)
@@ -55,9 +75,7 @@ export default class MessageService {
             
             // Adım D: Her şey yolunda, tüm değişiklikleri onayla.
             await session.commitTransaction();
-
-            // Adım E: Başarılı sonucu, populate edilmiş halde dön.
-            const populatedMessage = await newMessage.populate('sender', 'name username profilePicture');
+            const populatedMessage = await newMessage.populate('sender', 'name username profilePicture'); // bu satır aslında repository'de olmalı
             return {
                 success: true,
                 statusCode: 201, // 201 Created

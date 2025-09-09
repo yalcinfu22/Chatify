@@ -69,15 +69,45 @@ export default class ChatRepository {
         }
     }
 
-    // In chatRepository
-    async findById(chatId, populateOptions = null) {
+    async findById(chatId, options = {}) {
         try {
+            const { populateOptions = null, session = null } = options;
+            
             let query = Chat.findById(chatId);
-
+            
             if (populateOptions) {
                 query = query.populate(populateOptions);
             }
+            
+            if (session) {
+                query = query.session(session);
+            }
+            
+            const chat = await query;
+            return chat;
+        } catch (error) {
+            console.log("Error in findById repository", error);
+            throw error;
+        }
+    }
 
+    async findNonDeletedById(chatId, options = {}) {
+        try {
+            const { populateOptions = null, session = null } = options;
+            
+            let query = Chat.findOne({
+                _id: chatId,
+                isDeleted: false
+            });
+            
+            if (populateOptions) {
+                query = query.populate(populateOptions);
+            }
+            
+            if (session) {
+                query = query.session(session);
+            }
+            
             const chat = await query;
             return chat;
         } catch (error) {

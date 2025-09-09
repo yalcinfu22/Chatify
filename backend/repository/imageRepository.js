@@ -21,12 +21,7 @@ export default class ImageRepository {
         );
         return updatedImage;
     }
-    /**
-     * Bir görseli veritabanından kalıcı olarak siler.
-     * Sadece sistemin hata temizleme (rollback) işlemleri için kullanılmalıdır.
-     * @param {string} imageId - Kalıcı olarak silinecek görselin ID'si.
-     * @returns {Promise<Image|null>} Silinen görsel dökümanını döndürür.
-     */
+
     async hardDeleteById(imageId) {
         const deletedImage = await Image.findByIdAndDelete(imageId);
         return deletedImage;

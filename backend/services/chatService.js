@@ -16,6 +16,7 @@ import { canUserManageGroup, isUserMemberOfChat } from '../helpers/permission.js
 import test from '../utils/test.js';
 
 export default class ChatService {
+
     async createDirectChat(creatorId, recipientIdentifier) {
         // Hata durumunda geri alınacak kaynakları izlemek için değişkenler
         let newChat = null;
