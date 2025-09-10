@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { fetchWithToken } from '../../services/api';
 
 const NewChatModal = ({ onClose, onSuccess }) => {
-  const [recipientIdentifier, setrecipientIdentifier] = useState('');
+  const [recipientIdentifier, setRecipientIdentifier] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -19,7 +19,7 @@ const NewChatModal = ({ onClose, onSuccess }) => {
       const { data } = await fetchWithToken('/chats/direct', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ recipientIdentifier })
+        body: JSON.stringify({ recipientIdentifier }) // Changed from recipientSpecifier
       });
 
       if (data.success) {
@@ -42,7 +42,7 @@ const NewChatModal = ({ onClose, onSuccess }) => {
           type="text"
           placeholder="Enter username or phone number"
           value={recipientIdentifier}
-          onChange={(e) => setrecipientIdentifier(e.target.value)}
+          onChange={(e) => setRecipientIdentifier(e.target.value)}
           onKeyPress={(e) => e.key === 'Enter' && handleSubmit()}
           className="modal-input"
         />

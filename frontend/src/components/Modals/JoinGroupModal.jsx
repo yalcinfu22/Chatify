@@ -23,13 +23,15 @@ const JoinGroupModal = ({ onClose, onSuccess }) => {
       });
 
       if (data.success) {
-        // Fetch messages for the newly joined chat
-        const messagesResponse = await fetchWithToken(`/chats/${data.data._id}/messages`);
-        const chatWithMessages = {
-          ...data.data,
-          messages: messagesResponse.data.success ? messagesResponse.data.data : []
+        // Pass the joined chat data with safe defaults
+        const chatData = {
+          _id: data.data?._id,
+          displayName: data.data?.displayName || data.data?.name || 'New Group',
+          isGroupChat: data.data?.isGroupChat !== false,
+          displayPicture: data.data?.displayPicture || data.data?.groupPicture,
+          ...data.data
         };
-        onSuccess(chatWithMessages);
+        onSuccess(chatData);
       } else {
         setError(data.errorMessage || 'Failed to join group');
       }

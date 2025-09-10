@@ -33,10 +33,22 @@ const ChatArea = ({ chat, onChatUpdate, onLeaveChat }) => {
     try {
       const { data } = await fetchWithToken(`/chats/${chat._id}/messages`);
       if (data.success) {
-        setMessages(data.data.messages || []);
+        // Handle both data.data.messages and data.data formats
+        let messageData = data.data?.messages || data.data || [];
+        messageData = Array.isArray(messageData) ? messageData : [];
+        
+        // Sort messages by date (oldest first, newest at bottom)
+        const sortedMessages = messageData.sort((a, b) => {
+          const dateA = new Date(a.createdAt || a.updatedAt);
+          const dateB = new Date(b.createdAt || b.updatedAt);
+          return dateA - dateB; // Ascending order (oldest to newest)
+        });
+        
+        setMessages(sortedMessages);
       }
     } catch (error) {
-      console.error('Failed to fetch messages');
+      console.error('Failed to fetch messages:', error);
+      setMessages([]);
     }
     setLoading(false);
   };
@@ -74,7 +86,7 @@ const ChatArea = ({ chat, onChatUpdate, onLeaveChat }) => {
         onChatUpdate && onChatUpdate(chat._id, data.data);
       }
     } catch (error) {
-      console.error('Failed to send message');
+      console.error('Failed to send message:', error);
     }
   };
 
@@ -92,7 +104,7 @@ const ChatArea = ({ chat, onChatUpdate, onLeaveChat }) => {
         ));
       }
     } catch (error) {
-      console.error('Failed to delete message');
+      console.error('Failed to delete message:', error);
     }
   };
 
@@ -104,15 +116,20 @@ const ChatArea = ({ chat, onChatUpdate, onLeaveChat }) => {
     if (!confirm(message)) return;
     
     try {
-      const { status } = await fetchWithToken(`/chats/${chat._id}/leave/me`, {
+      // Using the correct endpoint with /me
+      const { data, status } = await fetchWithToken(`/chats/${chat._id}/leave/me`, {
         method: 'DELETE'
       });
 
-      if (status === 200 || status === 204) {
+      if (status === 200 || status === 204 || data?.success) {
         onLeaveChat(chat._id);
+      } else {
+        console.error('Failed to leave chat:', data);
+        alert(data?.errorMessage || 'Failed to leave chat');
       }
     } catch (error) {
-      console.error('Failed to leave chat');
+      console.error('Failed to leave chat:', error);
+      alert('Failed to leave chat');
     }
   };
 
@@ -121,38 +138,51 @@ const ChatArea = ({ chat, onChatUpdate, onLeaveChat }) => {
       return <div className="deleted-message">This message was deleted</div>;
     }
 
-    const attachmentUrl = msg.attachment?.url 
-    ? `${API_BASE_URL}/${msg.attachment.url.replace(/^\//, '')}` // Baştaki /'ı kaldırarak çift // olmasını engelle
-    : null;
+    // Handle attachment URL properly
+    let attachmentUrl = null;
+    if (msg.attachment) {
+      // If attachment is an object with url property
+      if (msg.attachment.url) {
+        attachmentUrl = `${API_BASE_URL}/${msg.attachment.url.replace(/^\//, '')}`;
+      } 
+      // If attachment is a string (ID or path)
+      else if (typeof msg.attachment === 'string') {
+        attachmentUrl = `${API_BASE_URL}/uploads/${msg.attachment}`;
+      }
+    }
 
     switch(msg.contentType) {
       case 'emoji':
-        return <div className="emoji-content">{attachmentUrl}</div>;
+        return <div className="emoji-content">{msg.content}</div>;
       
       case 'image':
-        return (
+        return attachmentUrl ? (
           <img 
-            src={`${attachmentUrl}`} 
+            src={attachmentUrl} 
             alt="Image" 
             className="image-content"
+            onError={(e) => {
+              console.error('Image load error:', e);
+              e.target.style.display = 'none';
+            }}
           />
-        );
+        ) : <div>Image not available</div>;
       
       case 'video':
-        return (
+        return attachmentUrl ? (
           <video controls className="video-content">
-            <source src={`${attachmentUrl}`} />
+            <source src={attachmentUrl} />
           </video>
-        );
+        ) : <div>Video not available</div>;
       
       case 'gif':
-        return (
+        return attachmentUrl ? (
           <img 
-            src={`${attachmentUrl}`} 
+            src={attachmentUrl} 
             alt="GIF" 
             className="gif-content"
           />
-        );
+        ) : <div>GIF not available</div>;
       
       case 'link':
         return (
@@ -171,9 +201,10 @@ const ChatArea = ({ chat, onChatUpdate, onLeaveChat }) => {
           <div className="hybrid-content">
             {attachmentUrl && (
               <img 
-                src={`${attachmentUrl}`} 
-                alt="attachment" 
+                src={attachmentUrl} 
+                alt="Attachment" 
                 className="hybrid-image"
+                onError={(e) => e.target.style.display = 'none'}
               />
             )}
             {msg.content && <div className="hybrid-text">{msg.content}</div>}
@@ -181,7 +212,7 @@ const ChatArea = ({ chat, onChatUpdate, onLeaveChat }) => {
         );
       
       default:
-        return <div>{msg.content}</div>;
+        return <div>{msg.content || 'No content'}</div>;
     }
   };
 
@@ -194,6 +225,10 @@ const ChatArea = ({ chat, onChatUpdate, onLeaveChat }) => {
     );
   }
 
+  // Safe access to displayName with fallback
+  const chatDisplayName = chat.displayName || chat.name || 'Chat';
+  const firstLetter = chatDisplayName[0]?.toUpperCase() || '?';
+
   return (
     <div className="chat-area">
       {/* Chat Header */}
@@ -204,10 +239,10 @@ const ChatArea = ({ chat, onChatUpdate, onLeaveChat }) => {
             backgroundImage: `url(${API_BASE_URL}/${chat.displayPicture})`
           } : {}}
         >
-          {!chat.displayPicture && chat.displayName[0].toUpperCase()}
+          {!chat.displayPicture && firstLetter}
         </div>
         <div className="chat-header-info">
-          <div className="chat-name">{chat.displayName}</div>
+          <div className="chat-name">{chatDisplayName}</div>
           <div className="chat-status">
             {chat.isGroupChat ? 'Group Chat' : 'Direct Chat'}
           </div>
@@ -230,10 +265,10 @@ const ChatArea = ({ chat, onChatUpdate, onLeaveChat }) => {
           <div className="no-messages">No messages yet. Start the conversation!</div>
         ) : (
           messages.map((msg) => {
-            const isMyMessage = msg.sender._id === user._id;
-            const senderName = msg.sender._id === user._id 
+            const isMyMessage = msg.sender?._id === user?._id;
+            const senderName = msg.sender?._id === user?._id 
               ? 'You' 
-              : `${msg.sender.name} ${msg.sender.surname}`;
+              : msg.sender?.name || 'Unknown';
 
             return (
               <div
@@ -252,7 +287,7 @@ const ChatArea = ({ chat, onChatUpdate, onLeaveChat }) => {
                   )}
                   {renderMessageContent(msg)}
                   <div className="message-time">
-                    {new Date(msg.updatedAt).toLocaleTimeString()}
+                    {new Date(msg.updatedAt || msg.createdAt).toLocaleTimeString()}
                   </div>
                 </div>
               </div>

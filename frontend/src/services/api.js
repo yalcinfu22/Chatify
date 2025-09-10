@@ -6,7 +6,7 @@ export const fetchWithToken = async (url, options = {}) => {
     ...options,
     headers: {
       ...options.headers,
-      'token': token || '',
+      'token': token || '',  // Using 'token' header, not 'Authorization'
     },
   };
   
