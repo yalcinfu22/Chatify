@@ -31,6 +31,24 @@ export default class ChatController {
             });
         }
     }
+
+    async getChatDetails(req, res) {
+        try {
+            const {userId} = req.user
+            const {chatId} = req.params
+            const result = await chatService.getChatDetails(userId, chatId)
+            if (!result.success) {
+              return res.status(result.statusCode).send(result.errorMessage);
+            }
+            return res.status(result.statusCode).send(result.data);
+        } catch (error) {
+            return res.status(500).json({
+              success: false,
+              errorMessage: error.message || "Internal Server Error"
+            });    
+        }
+    }
+
     async createGroupChat(req, res) {
         try {
             const {userId} = req.user
@@ -50,6 +68,7 @@ export default class ChatController {
             });
         } 
     }
+
     async deleteChat(req, res) {
         try {
             // URL'den gelen 'chatId' parametresini al

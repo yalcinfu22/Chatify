@@ -27,6 +27,7 @@ export default class UserService {
       if (!user) {
         return {
           success: false,
+          statusCode: 404,
           errorMessage: "Kullanıcı Bulunamadı! Lütfen bilgilerinizi kontrol ediniz.",
         };
       }
@@ -39,7 +40,6 @@ export default class UserService {
             userId: user._id,
             username: user.username, // Bu bilgiler token'in payloud'una eklenecek,
             phone: user.phone,  //  böylece bu üç unique bilgiyi gelen requestlerden kolayca almış oluyoruz
-            
           },
           SECRET,
           {
@@ -51,17 +51,20 @@ export default class UserService {
 
         return {
           success: true,
+          statusCode: 200,
           data: result,
         };
       } else {
         return {
           success: false,
+          statusCode: 401, // UNAUTHORIZED
           errorMessage: "Hatalı Şifre!",
         };
       }
     } catch (error) {
       return {
         success: false,
+        statusCode: 500,
         errorMessage: error,
       };
     }
@@ -112,6 +115,7 @@ export default class UserService {
     } catch (error) {
       return {
         success: false,
+        statusCode: 500,
         errorMessage: error.message || "Sunucuda beklenmedik bir hata oluştu.",
       };
     }

@@ -77,6 +77,14 @@ router.delete(
 );
 
 router.get(
+    "/:chatId",
+    [ param('chatId', 'Geçerli bir sohbet IDsi girilmelidir.').isMongoId() ],
+    validationController.validateRequest,
+    chatController.getChatDetails
+)
+
+
+router.get(
     '/',
     chatController.getUserChats
 );
@@ -117,4 +125,5 @@ router.get(
     validationController.validateRequest,
     messageController.getLatestMessages
 )
+
 export default router

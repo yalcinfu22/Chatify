@@ -51,7 +51,6 @@ export default class MessageService {
             if (file) {
                 const imageResult = await imageService.saveImage(file, userId, session); // session'ı delege et
                 if (!imageResult.success) {
-                    // Bu, DB hatası değil, yönetilebilir bir hata (örn: dosya tipi yanlış).
                     // Transaction'ı iptal edip hatayı dön.
                     await session.abortTransaction();
                     session.endSession();
@@ -60,7 +59,7 @@ export default class MessageService {
                 attachmentId = imageResult.data._id;
             }
 
-            // Adım B: Mesajı oluştur (transaction içinde)
+            // Adım B: Mesajı oluştur
             const messageInfo = {
                 content,
                 contentType,
@@ -70,7 +69,7 @@ export default class MessageService {
             };
             const newMessage = await messageRepository.saveMessage(messageInfo, session);
 
-            // Adım C: Sohbeti güncelle (transaction içinde)
+            // Adım C: Sohbeti güncelle
             await chatRepository.updateChatLatest(chatId, newMessage._id, session);
             
             // Adım D: Her şey yolunda, tüm değişiklikleri onayla.
@@ -155,7 +154,7 @@ export default class MessageService {
             return {
                 success: true,
                 statusCode: 200,
-                data: {
+                data: { // this breaks the convention is there a better way to do it
                     messages: messages,
                     count: messages.length
                 }

@@ -215,6 +215,35 @@ export default class ChatService {
         }
     }
 
+    async getChatDetails(userId, chatId) { // iyileştirilmeli
+        try {
+            const targetChat = await chatRepository.findNonDeletedById(chatId)
+            if(!isUserMemberOfChat(targetChat, userId)) {
+                console.log(`${userId} attempted to get the chat details from another chat`)
+                return {
+                    success: false,
+                    statusCode: 403, // FORBIDDEN
+                    errorMessage: `${userId} attempted to get the chat details from another chat`,
+                }
+            }
+
+            const chatDetails = await chatRepository.getChatDetails(chatId);
+            
+            return {
+                success: true,
+                statusCode: 200,
+                data: chatDetails
+            };
+        } catch (error) {
+            console.error('getChatDetails service error:', error);
+            return {
+                success: false,
+                statusCode: 500,
+                errorMessage: 'Failed to get the chat details'
+            };
+        }
+    }
+
     async joinChat(userId, inviteCode) {
         let userUpdated = false;
         let chat;

@@ -91,6 +91,27 @@ export default class ChatRepository {
         }
     }
 
+    async getChatDetails(chatId) {
+        try {
+            const chat = await Chat.findById(chatId)
+                .populate({
+                    path: 'members',
+                    select: 'profilePicture firstName lastName isOnline',
+                    model: 'User' // Adjust model name if different
+                })
+                .lean(); // Use lean() for better performance if you don't need Mongoose documents
+            
+            if (!chat) {
+                throw new Error('Chat not found');
+            }
+        
+            return chat;
+        } catch (error) {
+            console.error('getChatDetails repository error:', error);
+            throw error;
+        }
+    }
+
     async findNonDeletedById(chatId, options = {}) {
         try {
             const { populateOptions = null, session = null } = options;
