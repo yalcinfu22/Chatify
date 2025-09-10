@@ -19,7 +19,7 @@ const JoinGroupModal = ({ onClose, onSuccess }) => {
       const { data } = await fetchWithToken('/chats/join', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ invitationCode: inviteCode })
+        body: JSON.stringify({ inviteCode: inviteCode })
       });
 
       if (data.success) {

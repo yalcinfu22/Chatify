@@ -12,7 +12,6 @@ const NewGroupModal = ({ onClose, onSuccess }) => {
       setError('Please enter a group name');
       return;
     }
-    
     setLoading(true);
     setError('');
 
@@ -26,7 +25,7 @@ const NewGroupModal = ({ onClose, onSuccess }) => {
       const token = localStorage.getItem('token');
       const response = await fetch(`${API_BASE_URL}/chats/group`, {
         method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}` },
+        headers: { 'token': token },
         body: formData
       });
 

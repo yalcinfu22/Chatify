@@ -10,7 +10,7 @@ export default class ValidationController {
                     if (err) console.log('File cleanup error:', err);
                 });
             }
-         
+            console.log(req.body)
             return res.status(400).json({
                 success: false,
                 errorMessage: "Validation Error!",

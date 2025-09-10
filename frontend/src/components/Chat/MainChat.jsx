@@ -50,7 +50,6 @@ const MainChat = () => {
       </div>
     );
   }
-
   return (
     <div className="main-chat-container">
       <ChatSidebar
@@ -68,5 +67,4 @@ const MainChat = () => {
     </div>
   );
 };
-
 export default MainChat;

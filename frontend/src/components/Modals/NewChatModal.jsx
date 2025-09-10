@@ -2,12 +2,12 @@ import React, { useState } from 'react';
 import { fetchWithToken } from '../../services/api';
 
 const NewChatModal = ({ onClose, onSuccess }) => {
-  const [recipientSpecifier, setRecipientSpecifier] = useState('');
+  const [recipientIdentifier, setrecipientIdentifier] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   const handleSubmit = async () => {
-    if (!recipientSpecifier.trim()) {
+    if (!recipientIdentifier.trim()) {
       setError('Please enter a username or phone number');
       return;
     }
@@ -19,7 +19,7 @@ const NewChatModal = ({ onClose, onSuccess }) => {
       const { data } = await fetchWithToken('/chats/direct', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ recipientSpecifier })
+        body: JSON.stringify({ recipientIdentifier })
       });
 
       if (data.success) {
@@ -41,8 +41,8 @@ const NewChatModal = ({ onClose, onSuccess }) => {
         <input
           type="text"
           placeholder="Enter username or phone number"
-          value={recipientSpecifier}
-          onChange={(e) => setRecipientSpecifier(e.target.value)}
+          value={recipientIdentifier}
+          onChange={(e) => setrecipientIdentifier(e.target.value)}
           onKeyPress={(e) => e.key === 'Enter' && handleSubmit()}
           className="modal-input"
         />

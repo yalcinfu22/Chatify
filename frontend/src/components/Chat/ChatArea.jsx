@@ -61,7 +61,7 @@ const ChatArea = ({ chat, onChatUpdate, onLeaveChat }) => {
       const token = localStorage.getItem('token');
       const response = await fetch(`${API_BASE_URL}/chats/${chat._id}/messages`, {
         method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}` },
+        headers: { 'token': token },
         body: formData
       });
 

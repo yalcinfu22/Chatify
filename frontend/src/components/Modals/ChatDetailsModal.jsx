@@ -151,5 +151,4 @@ const ChatDetailsModal = ({ chat, onClose }) => {
     </div>
   );
 };
-
 export default ChatDetailsModal;
