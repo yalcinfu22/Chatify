@@ -32,8 +32,8 @@ const ChatArea = ({ chat, onChatUpdate, onLeaveChat }) => {
     setLoading(true);
     try {
       const { data } = await fetchWithToken(`/chats/${chat._id}/messages`);
-      if (data.messages) {
-        setMessages(data.messages || []);
+      if (data.success) {
+        setMessages(data.data.messages || []);
       }
     } catch (error) {
       console.error('Failed to fetch messages');

@@ -11,9 +11,9 @@ export default class MessageController {
             const result = await messageService.sendMessage(chatId, userId, req.file, content, contentType)
 
             if(!result.success) {
-                return res.status(result.statusCode).json(result.errorMessage)
+                return res.status(result.statusCode).json(result)
             }
-            return res.status(result.statusCode).json(result.data)
+            return res.status(result.statusCode).json(result)
             
         } catch (error) {
             console.error('Error in sendMessage:', error);
@@ -30,9 +30,9 @@ export default class MessageController {
             const {messageId} = req.params
             const result = await messageService.deleteMessage(messageId, userId)
             if(!result.success) {
-                return res.status(result.statusCode).json(result.errorMessage)
+                return res.status(result.statusCode).json(result)
             }
-            return res.status(result.statusCode).json(result.data)
+            return res.status(result.statusCode).json(result)
         } catch (error) {
             console.error('Error in deleteMessage:', error);
             return res.status(500).json({
@@ -48,9 +48,9 @@ export default class MessageController {
             const {userId} = req.user
             const result = await messageService.getLatestMessages(userId, chatId)
             if(!result.success) {
-                return res.status(result.statusCode).json(result.errorMessage)
+                return res.status(result.statusCode).json(result)
             }
-            return res.status(result.statusCode).json(result.data)
+            return res.status(result.statusCode).json(result)
         } catch (error) {
             console.error('Error in getMessages:', error);
             return res.status(500).json({
