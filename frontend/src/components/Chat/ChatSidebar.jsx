@@ -114,5 +114,4 @@ const ChatSidebar = ({ chats, selectedChat, onSelectChat, onRefresh, onJoinGroup
     </div>
   );
 };
-
 export default ChatSidebar;

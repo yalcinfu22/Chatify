@@ -6,7 +6,7 @@ const imageRepository = new ImageRepository();
 export default class ImageService {
     async saveImage(file, uploaderId) {
         try {
-            const urlForDb = `uploads/chat-pictures/${file.filename}`; // Yolu düzeltelim
+            const urlForDb = `uploads/chat-group-pictures/${file.filename}`; // Yolu düzeltelim
 
             const imageInfo = {
                 url: urlForDb,
