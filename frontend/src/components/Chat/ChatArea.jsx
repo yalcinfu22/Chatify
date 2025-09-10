@@ -121,14 +121,18 @@ const ChatArea = ({ chat, onChatUpdate, onLeaveChat }) => {
       return <div className="deleted-message">This message was deleted</div>;
     }
 
+    const attachmentUrl = msg.attachment?.url 
+    ? `${API_BASE_URL}/${msg.attachment.url.replace(/^\//, '')}` // Baştaki /'ı kaldırarak çift // olmasını engelle
+    : null;
+
     switch(msg.contentType) {
       case 'emoji':
-        return <div className="emoji-content">{msg.content}</div>;
+        return <div className="emoji-content">{attachmentUrl}</div>;
       
       case 'image':
         return (
           <img 
-            src={`${API_BASE_URL}/${msg.attachment}`} 
+            src={`${attachmentUrl}`} 
             alt="Image" 
             className="image-content"
           />
@@ -137,14 +141,14 @@ const ChatArea = ({ chat, onChatUpdate, onLeaveChat }) => {
       case 'video':
         return (
           <video controls className="video-content">
-            <source src={`${API_BASE_URL}/${msg.attachment}`} />
+            <source src={`${attachmentUrl}`} />
           </video>
         );
       
       case 'gif':
         return (
           <img 
-            src={`${API_BASE_URL}/${msg.attachment}`} 
+            src={`${attachmentUrl}`} 
             alt="GIF" 
             className="gif-content"
           />
@@ -165,10 +169,10 @@ const ChatArea = ({ chat, onChatUpdate, onLeaveChat }) => {
       case 'hybrid':
         return (
           <div className="hybrid-content">
-            {msg.attachment && (
+            {attachmentUrl && (
               <img 
-                src={`${API_BASE_URL}/${msg.attachment}`} 
-                alt="Attachment" 
+                src={`${attachmentUrl}`} 
+                alt="attachment" 
                 className="hybrid-image"
               />
             )}

@@ -40,9 +40,10 @@ const messageStorage = multer.diskStorage({
         cb(null, uploadPath);
     },
     filename: function (req, file, cb) {
+        console.log('--- MESSAGE FILENAME ÇALIŞIYOR ---'); 
         const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
         const extension = path.extname(file.originalname);
-        cb(null, `profile_${uniqueSuffix}${extension}`);
+        cb(null, `message_${uniqueSuffix}${extension}`);
     }
 });
 

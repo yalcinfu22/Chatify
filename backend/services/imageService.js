@@ -6,10 +6,23 @@ const imageRepository = new ImageRepository();
 export default class ImageService {
     async saveImage(file, uploaderId) {
         try {
-            const urlForDb = `uploads/chat-group-pictures/${file.filename}`; // Yolu düzeltelim
+                // file.path şu an: 'C:\\Users\\...\\backend\\uploads\\chat-messages\\message_123.png'
+
+    // 1. Yolu "uploads" kelimesinden itibaren bölerek göreli (relative) kısmı al.
+    // path.split('uploads') -> ['C:\\Users\\...\\backend\\', '\\chat-messages\\message_123.png']
+    // [1] ile ikinci parçayı alırız.
+    const relativePathWithBackslashes = file.path.split('uploads')[1];
+
+    // 2. Windows'un ters taksimlerini (\) web uyumlu düz taksimlere (/) çevir.
+    const relativePathWithForwardSlashes = relativePathWithBackslashes.replace(/\\/g, '/');
+
+    // 3. Başına "uploads" kelimesini tekrar ekleyerek son URL'i oluştur.
+    // Sonuç: 'uploads/chat-messages/message_123.png'
+    const finalUrl = `uploads${relativePathWithForwardSlashes}`;
+
 
             const imageInfo = {
-                url: urlForDb,
+                url: finalUrl,
                 uploader: uploaderId,
                 fileType: file.fileType // multer'da türü tespit ediyoruz
             };
