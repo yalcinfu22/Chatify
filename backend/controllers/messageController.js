@@ -45,7 +45,7 @@ export default class MessageController {
     async getLatestMessages(req, res) {
         try {
             const {chatId} = req.params
-            const {userId} = req.body
+            const {userId} = req.user
             const result = await messageService.getLatestMessages(userId, chatId)
             if(!result.success) {
                 return res.status(result.statusCode).json(result.errorMessage)

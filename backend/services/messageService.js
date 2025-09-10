@@ -139,7 +139,7 @@ export default class MessageService {
 
     async getLatestMessages(userId, chatId) {
         try {
-            const targetChat = await findNonDeletedById(chatId)
+            const targetChat = await chatRepository.findNonDeletedById(chatId)
             if(!isUserMemberOfChat(targetChat, userId)) {
                 console.log(`${userId} attempted to get messages from another chat`)
                 return {

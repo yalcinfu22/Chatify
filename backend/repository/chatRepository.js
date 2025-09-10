@@ -96,7 +96,7 @@ export default class ChatRepository {
             const chat = await Chat.findById(chatId)
                 .populate({
                     path: 'members',
-                    select: 'profilePicture firstName lastName isOnline',
+                    select: 'profilePicture name surname isOnline',
                     model: 'User' // Adjust model name if different
                 })
                 .lean(); // Use lean() for better performance if you don't need Mongoose documents
