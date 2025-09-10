@@ -2,20 +2,24 @@ import React, { useState } from 'react';
 import { fetchWithToken } from '../../services/api';
 
 const NewChatModal = ({ onClose, onSuccess }) => {
-  const [recipientIdentifier, setRecipientIdentifier] = useState('');
+  const [recipientSpecifier, setRecipientSpecifier] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   const handleSubmit = async () => {
-    if (!recipientIdentifier.trim()) return;
+    if (!recipientSpecifier.trim()) {
+      setError('Please enter a username or phone number');
+      return;
+    }
+    
     setLoading(true);
     setError('');
 
     try {
-      const data = await fetchWithToken('/chats/direct', {
+      const { data } = await fetchWithToken('/chats/direct', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ recipientIdentifier })
+        body: JSON.stringify({ recipientSpecifier })
       });
 
       if (data.success) {
@@ -37,16 +41,22 @@ const NewChatModal = ({ onClose, onSuccess }) => {
         <input
           type="text"
           placeholder="Enter username or phone number"
-          value={recipientIdentifier}
-          onChange={(e) => setRecipientIdentifier(e.target.value)}
+          value={recipientSpecifier}
+          onChange={(e) => setRecipientSpecifier(e.target.value)}
           onKeyPress={(e) => e.key === 'Enter' && handleSubmit()}
           className="modal-input"
         />
         <div className="modal-buttons">
-          <button onClick={handleSubmit} disabled={loading} className="primary-btn">
+          <button
+            onClick={handleSubmit}
+            disabled={loading}
+            className="primary-btn"
+          >
             {loading ? 'Creating...' : 'Create Chat'}
           </button>
-          <button onClick={onClose} className="secondary-btn">Cancel</button>
+          <button onClick={onClose} className="secondary-btn">
+            Cancel
+          </button>
         </div>
       </div>
     </div>

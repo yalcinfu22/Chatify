@@ -10,7 +10,7 @@ const MainChat = () => {
 
   const fetchChats = async () => {
     try {
-      const data = await fetchWithToken('/chats');
+      const { data } = await fetchWithToken('/chats');
       if (data.success) {
         setChats(data.data || []);
       }
@@ -24,20 +24,22 @@ const MainChat = () => {
     fetchChats();
   }, []);
 
-  const handleDeleteChat = async (chatId) => {
-    try {
-      const data = await fetchWithToken(`/chats/${chatId}`, {
-        method: 'DELETE'
-      });
-      if (data.success) {
-        fetchChats();
-        if (selectedChat?._id === chatId) {
-          setSelectedChat(null);
-        }
-      }
-    } catch (error) {
-      console.error('Failed to delete chat');
-    }
+  const handleChatUpdate = (chatId, newMessage) => {
+    setChats(prev => prev.map(chat => 
+      chat._id === chatId 
+        ? { ...chat, latestMessage: newMessage, lastMessageTime: newMessage.updatedAt }
+        : chat
+    ));
+  };
+
+  const handleLeaveChat = (chatId) => {
+    setChats(prev => prev.filter(chat => chat._id !== chatId));
+    setSelectedChat(null);
+  };
+
+  const handleJoinGroup = (newChat) => {
+    fetchChats();
+    setSelectedChat(newChat);
   };
 
   if (loading) {
@@ -55,10 +57,14 @@ const MainChat = () => {
         chats={chats}
         selectedChat={selectedChat}
         onSelectChat={setSelectedChat}
-        onDeleteChat={handleDeleteChat}
         onRefresh={fetchChats}
+        onJoinGroup={handleJoinGroup}
       />
-      <ChatArea chat={selectedChat} />
+      <ChatArea 
+        chat={selectedChat} 
+        onChatUpdate={handleChatUpdate}
+        onLeaveChat={handleLeaveChat}
+      />
     </div>
   );
 };

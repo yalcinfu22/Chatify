@@ -34,7 +34,6 @@ const AuthForm = ({ formType, onSuccess }) => {
 
     if (result.success) {
       if (formType === 'register') {
-        alert('Registration successful! Please login.');
         setFormData({ username: '', password: '', name: '', surname: '', phone: '', profilePicture: null });
       }
       onSuccess && onSuccess();
@@ -42,6 +41,12 @@ const AuthForm = ({ formType, onSuccess }) => {
       setError(result.error);
     }
     setIsLoading(false);
+  };
+
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter' && formType === 'login') {
+      handleSubmit();
+    }
   };
 
   return (
@@ -53,7 +58,7 @@ const AuthForm = ({ formType, onSuccess }) => {
         placeholder="Username"
         value={formData.username}
         onChange={(e) => setFormData({...formData, username: e.target.value})}
-        onKeyPress={(e) => e.key === 'Enter' && formType === 'login' && handleSubmit()}
+        onKeyPress={handleKeyPress}
         className="form-input"
       />
       
@@ -62,7 +67,7 @@ const AuthForm = ({ formType, onSuccess }) => {
         placeholder="Password (min 6 characters)"
         value={formData.password}
         onChange={(e) => setFormData({...formData, password: e.target.value})}
-        onKeyPress={(e) => e.key === 'Enter' && formType === 'login' && handleSubmit()}
+        onKeyPress={handleKeyPress}
         className="form-input"
       />
       

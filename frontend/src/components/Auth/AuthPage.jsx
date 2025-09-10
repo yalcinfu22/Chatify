@@ -26,7 +26,10 @@ const AuthPage = ({ onAuthSuccess }) => {
         
         <AuthForm 
           formType={isLogin ? 'login' : 'register'} 
-          onSuccess={isLogin ? onAuthSuccess : () => setIsLogin(true)} 
+          onSuccess={isLogin ? onAuthSuccess : () => {
+            alert('Registration successful! Please login.');
+            setIsLogin(true);
+          }} 
         />
       </div>
     </div>

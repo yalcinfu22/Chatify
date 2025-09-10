@@ -19,7 +19,7 @@ export const fetchWithToken = async (url, options = {}) => {
     window.location.reload();
   }
   
-  return data;
+  return { data, status: response.status };
 };
 
 export const loginAPI = async (username, password) => {

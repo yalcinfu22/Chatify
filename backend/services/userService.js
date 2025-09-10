@@ -48,7 +48,7 @@ export default class UserService {
         );
 
         result = serializer.tokenResponseSerializers(user, token);
-
+ 
         return {
           success: true,
           statusCode: 200,

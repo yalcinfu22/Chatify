@@ -3,40 +3,64 @@ import { useAuth } from '../../contexts/AuthContext';
 import { API_BASE_URL } from '../../services/api';
 import NewChatModal from '../Modals/NewChatModal';
 import NewGroupModal from '../Modals/NewGroupModal';
+import JoinGroupModal from '../Modals/JoinGroupModal';
 
-const ChatSidebar = ({ chats, selectedChat, onSelectChat, onDeleteChat, onRefresh }) => {
+const ChatSidebar = ({ chats, selectedChat, onSelectChat, onRefresh, onJoinGroup }) => {
   const { user, logout } = useAuth();
   const [showNewChatModal, setShowNewChatModal] = useState(false);
   const [showNewGroupModal, setShowNewGroupModal] = useState(false);
+  const [showJoinGroupModal, setShowJoinGroupModal] = useState(false);
 
   return (
     <div className="chat-sidebar">
+      {/* Header */}
       <div className="sidebar-header">
         <div className="header-top">
           <h2>WhatsApp</h2>
-          <button onClick={logout} className="logout-btn">Logout</button>
+          <button onClick={logout} className="logout-btn">
+            Logout
+          </button>
         </div>
-        <div className="user-info">{user?.name} {user?.surname}</div>
+        <div className="user-info">
+          {user?.name} {user?.surname}
+        </div>
         <div className="action-buttons">
-          <button onClick={() => setShowNewChatModal(true)} className="action-btn">
+          <button 
+            onClick={() => setShowNewChatModal(true)} 
+            className="action-btn"
+          >
             New Chat
           </button>
-          <button onClick={() => setShowNewGroupModal(true)} className="action-btn">
+          <button 
+            onClick={() => setShowNewGroupModal(true)} 
+            className="action-btn"
+          >
             New Group
           </button>
-          <button onClick={onRefresh} className="refresh-btn">↻</button>
+          <button 
+            onClick={() => setShowJoinGroupModal(true)} 
+            className="action-btn"
+          >
+            Join Group
+          </button>
+          <button onClick={onRefresh} className="refresh-btn">
+            ↻
+          </button>
         </div>
       </div>
 
+      {/* Chat List */}
       <div className="chat-list">
         {chats.length === 0 ? (
-          <div className="empty-state">No chats yet. Start a new conversation!</div>
+          <div className="empty-state">
+            No chats yet. Start a new conversation!
+          </div>
         ) : (
           chats.map(chat => (
             <div
               key={chat._id}
-              className={`chat-item ${selectedChat?._id === chat._id ? 'selected' : ''}`}
               onClick={() => onSelectChat(chat)}
+              className={`chat-item ${selectedChat?._id === chat._id ? 'selected' : ''}`}
             >
               <div 
                 className="chat-avatar"
@@ -48,24 +72,16 @@ const ChatSidebar = ({ chats, selectedChat, onSelectChat, onDeleteChat, onRefres
               </div>
               <div className="chat-info">
                 <div className="chat-name">{chat.displayName}</div>
-                <div className="chat-type">{chat.isGroupChat ? 'Group' : 'Direct Chat'}</div>
+                <div className="chat-type">
+                  {chat.isGroupChat ? 'Group' : 'Direct Chat'}
+                </div>
               </div>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (confirm(`${chat.isGroupChat ? 'Delete' : 'Hide'} this chat?`)) {
-                    onDeleteChat(chat._id);
-                  }
-                }}
-                className="delete-btn"
-              >
-                {chat.isGroupChat ? '✕' : '👁'}
-              </button>
             </div>
           ))
         )}
       </div>
 
+      {/* Modals */}
       {showNewChatModal && (
         <NewChatModal
           onClose={() => setShowNewChatModal(false)}
@@ -82,6 +98,16 @@ const ChatSidebar = ({ chats, selectedChat, onSelectChat, onDeleteChat, onRefres
           onSuccess={() => {
             setShowNewGroupModal(false);
             onRefresh();
+          }}
+        />
+      )}
+
+      {showJoinGroupModal && (
+        <JoinGroupModal
+          onClose={() => setShowJoinGroupModal(false)}
+          onSuccess={(newChat) => {
+            setShowJoinGroupModal(false);
+            onJoinGroup(newChat);
           }}
         />
       )}

@@ -8,7 +8,11 @@ const NewGroupModal = ({ onClose, onSuccess }) => {
   const [error, setError] = useState('');
 
   const handleSubmit = async () => {
-    if (!name.trim()) return;
+    if (!name.trim()) {
+      setError('Please enter a group name');
+      return;
+    }
+    
     setLoading(true);
     setError('');
 
@@ -22,7 +26,7 @@ const NewGroupModal = ({ onClose, onSuccess }) => {
       const token = localStorage.getItem('token');
       const response = await fetch(`${API_BASE_URL}/chats/group`, {
         method: 'POST',
-        headers: { 'token': token || '' },
+        headers: { 'Authorization': `Bearer ${token}` },
         body: formData
       });
 
@@ -51,17 +55,26 @@ const NewGroupModal = ({ onClose, onSuccess }) => {
           onKeyPress={(e) => e.key === 'Enter' && handleSubmit()}
           className="modal-input"
         />
-        <input
-          type="file"
-          accept="image/*"
-          onChange={(e) => setGroupPicture(e.target.files[0])}
-          className="file-input"
-        />
+        <div className="file-input-container">
+          <label>Group Picture (Optional)</label>
+          <input
+            type="file"
+            accept="image/*"
+            onChange={(e) => setGroupPicture(e.target.files[0])}
+            className="file-input"
+          />
+        </div>
         <div className="modal-buttons">
-          <button onClick={handleSubmit} disabled={loading} className="primary-btn">
+          <button
+            onClick={handleSubmit}
+            disabled={loading}
+            className="primary-btn"
+          >
             {loading ? 'Creating...' : 'Create Group'}
           </button>
-          <button onClick={onClose} className="secondary-btn">Cancel</button>
+          <button onClick={onClose} className="secondary-btn">
+            Cancel
+          </button>
         </div>
       </div>
     </div>
