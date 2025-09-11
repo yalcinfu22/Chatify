@@ -99,12 +99,20 @@ export default class ChatRepository {
                     select: 'profilePicture name surname isOnline',
                     model: 'User' // Adjust model name if different
                 })
+                .populate({
+                    path: 'groupPicture',
+                    select: 'url',
+                    model: 'Image'
+                })
                 .lean(); // Use lean() for better performance if you don't need Mongoose documents
             
             if (!chat) {
                 throw new Error('Chat not found');
             }
-        
+            
+            // normalize groupPicture so frontend always gets an object
+            chat.groupPicture = chat.groupPicture || { url: null };
+
             return chat;
         } catch (error) {
             console.error('getChatDetails repository error:', error);

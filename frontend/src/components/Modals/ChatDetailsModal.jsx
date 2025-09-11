@@ -14,7 +14,7 @@ const ChatDetailsModal = ({ chat, onClose }) => {
 
   const fetchChatDetails = async () => {
     try {
-      const { data } = await fetchWithToken(`/chats/${chat._id}/details`);
+      const { data } = await fetchWithToken(`/chats/${chat._id}`);
       if (data) {
         setDetails(data);
       }
@@ -71,7 +71,7 @@ const ChatDetailsModal = ({ chat, onClose }) => {
             <div 
               className="group-avatar-large"
               style={details.groupPicture ? {
-                backgroundImage: `url(${API_BASE_URL}/${details.groupPicture})`
+                backgroundImage: `url(${API_BASE_URL}/${details.groupPicture.url})`
               } : {}}
             >
               {!details.groupPicture && (details.name?.[0] || 'G').toUpperCase()}
