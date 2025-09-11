@@ -117,7 +117,7 @@ const ChatArea = ({ chat, onChatUpdate, onLeaveChat }) => {
     
     try {
       // Using the correct endpoint with /me
-      const { data, status } = await fetchWithToken(`/chats/${chat._id}/leave/me`, {
+      const { data, status } = await fetchWithToken(`/chats/${chat._id}/members/me`, {
         method: 'DELETE'
       });
 

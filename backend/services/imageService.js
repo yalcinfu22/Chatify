@@ -36,11 +36,11 @@ export default class ImageService {
             return { success: false, errorMessage: error }
         }
     }
-    async softDeleteById(imageId, userId) {
+    async softDeleteById(imageId, userId, session = null) {
         try {
             // İleride burada daha karmaşık izin kontrolleri olabilir.
             // Örneğin: "Sadece resmi yükleyen kişi veya bir admin silebilir."
-            const result = await imageRepository.softDeleteById(imageId, userId);
+            const result = await imageRepository.softDeleteById(imageId, userId, session);
             if (!result) {
                 return { success: false, statusCode: 404, errorMessage: "Silinecek resim bulunamadı." };
             }

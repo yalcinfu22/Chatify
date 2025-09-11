@@ -1,6 +1,20 @@
 import Message from "../models/messageModel.js";
 
 export default class MessageRepository {
+    
+    async findMessagesWithAttachments(chatId, session = null) {
+        try {
+            return await Message.find(
+                { chat: chatId, attachment: { $ne: null }, isDeleted: false },
+                { attachment: 1 },
+                { session }
+            )
+        } catch (error) {
+            console.log("Error in findMessagesWithAttachments repository")
+            throw error
+        }
+    }
+
     async saveMessage(messageInfo, session = null) {
         try {
             const newMessage = new Message(messageInfo);
@@ -60,5 +74,24 @@ export default class MessageRepository {
         } catch (error) {
             throw new Error(`Failed to fetch all messages: ${error.message}`);
         }
+    }
+
+    async softDeleteMessagesByChatId(chatId, userId, session = null) {
+      try {
+        const result = await Message.updateMany(
+          { chat: chatId, isDeleted: false },
+          { 
+            $set: { 
+              isDeleted: true, 
+              deletedBy: userId 
+            } 
+          },
+          { session } // transaction içinde kullanmak için
+        );
+        return result; // { acknowledged, modifiedCount, matchedCount }
+      } catch (error) {
+        console.error("Error in softDeleteAllMessagesByChatId:", error);
+        throw error;
+      }
     }
 }

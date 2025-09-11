@@ -98,13 +98,14 @@ export default class UserRepository {
             };
         }
     }
-    async removeChatFromAllUsers(chatId) {
+    async removeChatFromAllUsers(chatId, session = null) {
         // 'chats' dizisi 'chatId'yi içeren tüm kullanıcıları bul ve
         // $pull operatörü ile o elemanı diziden çek/kaldır.
         try {
             return await User.updateMany( // ? bu adam başarısız olursa ne döndürüyor direkt atıyor mu
             { chats: chatId },
-            { $pull: { chats: chatId } }
+            { $pull: { chats: chatId } },
+            { session }
         );
         } catch (error) {
             console.log("Error in removeChatFromAllUsers repository")

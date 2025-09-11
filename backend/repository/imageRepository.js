@@ -8,7 +8,7 @@ export default class ImageRepository {
         // save() metodu bir 'session' objesi alabilir.
         return await newImage.save({ session });
     }
-    async softDeleteById(imageId, userId) {
+    async softDeleteById(imageId, userId, session = null) {
         const updatedImage = await Image.findByIdAndUpdate(
             imageId,
             { 
@@ -17,9 +17,21 @@ export default class ImageRepository {
                     deletedBy: userId 
                 } 
             },
-            { new: true } // Bu seçenek, metodun güncellenmiş dökümanı döndürmesini sağlar.
+            { new: true , session} // Bu seçenek, metodun güncellenmiş dökümanı döndürmesini sağlar.
         );
         return updatedImage;
+    }
+
+    async softDeleteImagesById(imageIds, userId, session = null) {
+        try {
+            await Image.updateMany(
+              { _id: { $in: imageIds }, isDeleted: false },
+              { $set: { isDeleted: true, deletedBy: userId } },
+              { session }
+            );    
+        } catch (error) {
+            console.log("Error in softDeleteImagesById repository")
+        }
     }
 
     async hardDeleteById(imageId) {

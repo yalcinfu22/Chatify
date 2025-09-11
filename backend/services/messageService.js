@@ -129,7 +129,7 @@ export default class MessageService {
             return {
                 success: false,
                 statusCode: 500,
-                errorMessage: error,
+                errorMessage: error.message,
                 message: "Internal server error in deleteMessage service"
             }
         } finally {
@@ -167,5 +167,30 @@ export default class MessageService {
                 errorMessage: 'Failed to fetch messages'
             };
         }
+    }
+
+    async softDeleteMessagesAndAttachmentsByChatId(chatId, userId, session = null) {
+      // 1️⃣ Find all messages in the chat with attachments
+      try {
+        const messagesWithAttachments = await messageRepository.findMessagesWithAttachments(chatId, session)
+
+        const attachmentIds = messagesWithAttachments.map(msg => msg.attachment);
+
+        // 2️⃣ Soft delete all attachments
+        if (attachmentIds.length > 0) {
+            await imageRepository.softDeleteImagesById(attachmentIds, userId, session)
+        }
+
+        // 3️⃣ Soft delete messages themselves
+        await messageRepository.softDeleteMessagesByChatId(chatId, userId, session)
+        return { success: true, statusCode: 204}
+      } catch (error) {
+        console.log("Error in softDeleteMessagesAndAttachmentsByChatId service")
+        return {
+            success: false,
+            statusCode: 500,
+            errorMessage: error.message
+        }
+      }
     }
 }

@@ -6,11 +6,18 @@ import { nanoid } from 'nanoid'; // eşşiz id üreticisi
 import ChatRepository from '../repository/chatRepository.js';
 import ImageService from './imageService.js';
 import UserRepository from '../repository/userRepository.js'; // Kullanıcıyı güncellemek için
+import MessageRepository from '../repository/messageRepository.js';
+import MessageService from './messageService.js';
+import ImageRepository from '../repository/imageRepository.js';
 
 const chatRepository = new ChatRepository();
 const imageService = new ImageService();
 const userRepository = new UserRepository();
+const messageRepository = new MessageRepository();
+const messageService = new MessageService();
+const imageRepository = new ImageRepository();
 
+import mongoose from 'mongoose' // transcation
 import generateInviteCode from '../helpers/nanoid.js';
 import { canUserManageGroup, isUserMemberOfChat } from '../helpers/permission.js';
 import test from '../utils/test.js';
@@ -123,8 +130,12 @@ export default class ChatService {
     }
 
     async deleteChat(chatId, userId) {
+        const session = await mongoose.startSession();
+        let result = ""
         try {
             // Adım 1: Chati Bul
+            session.startTransaction();
+
             const chat = await chatRepository.findById(chatId);
             if (!chat) {
                 return { success: false, statusCode: 404, errorMessage: "Sohbet bulunamadı." };
@@ -132,45 +143,73 @@ export default class ChatService {
             // Adım 2: Sohbetin Tipine Göre Karar Ver
             if (chat.isGroupChat) {
                 // Senaryo A: Bu bir grup sohbeti
-                return await this.#deleteGroupChat(chat, userId);
+                result = await this.#deleteGroupChat(chat, userId, session);
             } else {
                 // Senaryo B: Bu bir birebir sohbet
-                return await this.#deleteDirectChat(chat, userId);
+                result = await this.#deleteDirectChat(chat, userId, session);
             }
-
+            await session.commitTransaction();
+            return result
         } catch (error) {
+            await session.abortTransaction();
             console.error("deleteChat servisinde beklenmedik hata:", error);
             return { success: false, statusCode: 500, errorMessage: "Sohbet silinirken sunucu hatası oluştu." };
+        } finally {
+            session.endSession();
         }
     }
 
-    async #deleteGroupChat(chat, userId) {
-        if (!canUserManageGroup(chat,userId)) {
-            return { success: false, statusCode: 403, errorMessage: "Bu grubu silme yetkiniz yok." };
+    async #deleteGroupChat(chat, userId, session = null) {
+      let localSession = null;
+      try {
+        if (!session) {
+          localSession = await mongoose.startSession();
+          localSession.startTransaction();
+          session = localSession;
         }
-        if (chat.groupPicture) {
-            const result = await imageService.softDeleteById(chat.groupPicture, userId);
-            if(!result.success) { 
-                return result;
-            }
-        }
-        await userRepository.removeChatFromAllUsers(chat._id);
 
-        // Tüm userları chatten silme eklenebilir
-        await chatRepository.softDeleteById(chat._id, userId);
+        if (!canUserManageGroup(chat, userId)) {
+          return { success: false, statusCode: 403, errorMessage: "Bu grubu silme yetkiniz yok." };
+        }
+
+        if (chat.groupPicture) {
+          const result = await imageService.softDeleteById(chat.groupPicture, userId, session);
+          if (!result.success) return result;
+        }
+
+        await userRepository.removeChatFromAllUsers(chat._id, session);
+        await chatRepository.softDeleteById(chat._id, userId, session);
+        await messageService.softDeleteMessagesAndAttachmentsByChatId(chat._id, userId, session);
+        if(chat.groupPicture) {
+            await imageRepository.softDeleteById(chat.groupPicture, userId, session);
+        }
+
+        if (localSession) await localSession.commitTransaction();
 
         return { success: true, statusCode: 200 };
+      } catch (error) {
+        if (localSession) await localSession.abortTransaction();
+        console.log("Error in helper #deleteGroupChat service")
+        throw error;
+      } finally {
+        if (localSession) localSession.endSession();
+      }
     }
 
+
     async #deleteDirectChat(chat, userId) {
+        try {
+            if (!isUserMemberOfChat(chat,userId)) {
+                 return { success: false, statusCode: 403, errorMessage: "Bu sohbete erişim yetkiniz yok." };
+            }
+         
+            await chatRepository.hideChatForUser(chat._id, userId);
 
-        if (!isUserMemberOfChat(chat,userId)) {
-            return { success: false, statusCode: 403, errorMessage: "Bu sohbete erişim yetkiniz yok." };
+            return { success: true, statusCode: 200, message: "Sohbet listenizden kaldırıldı." };      
+        } catch (error) {
+            console.log("Error in helper #deleteDirectChat service")
+            throw  { success: true, statusCode: 500, errorMessage: error.messsage };
         }
-
-        await chatRepository.hideChatForUser(chat._id, userId);
-        
-        return { success: true, statusCode: 200, errorMessage: "Sohbet listenizden kaldırıldı." };
     }
 
     async getUserChats(userId) {
@@ -332,9 +371,13 @@ export default class ChatService {
                 
                 console.log(`Grup ${chatId} son admin ayrıldığı için dağıtılıyor...`);
 
+                await messageService.softDeleteMessagesAndAttachmentsByChatId(chatId, userId) // this part can be done with a function which does not need user authentication & validation I tried to use deleteChat but since the user is already not there I could not manage to do it
                 await userRepository.removeChatFromAllUsers(chatId);
-
                 await chatRepository.softDeleteById(chatId, userId);
+                await userRepository.removeChatFromAllUsers(chatId);
+                if(originalChat.groupPicture) {
+                    await imageRepository.softDeleteById(originalChat.groupPicture, userId);
+                }
 
                 return { 
                     success: true, 

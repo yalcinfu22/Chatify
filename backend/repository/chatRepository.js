@@ -247,7 +247,7 @@ export default class ChatRepository {
         }
     }
     
-    async softDeleteById(chatId, userId) {
+    async softDeleteById(chatId, userId, session = null) {
         try {
             const updatedChat = await Chat.findByIdAndUpdate( // aynı şekilde
             chatId,
@@ -257,7 +257,7 @@ export default class ChatRepository {
                     deletedBy: userId 
                 } 
             },
-            { new: true }
+            { new: true , session}
         );
             return updatedChat;
         } catch (error) {
