@@ -1059,3 +1059,144 @@ input:focus,
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Message Row Alignment */
+.messages-wrapper {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.message-row {
+  display: flex;
+  width: 100%;
+  margin-bottom: 12px;
+}
+
+.message-row-sent {
+  justify-content: flex-end;
+}
+
+.message-row-received {
+  justify-content: flex-start;
+}
+
+.message {
+  max-width: 70%;
+}
+
+.message-bubble {
+  padding: 8px 12px;
+  border-radius: 8px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  word-wrap: break-word;
+  position: relative;
+}
+
+.message.sent .message-bubble {
+  background: #dcf8c6;
+  border-bottom-right-radius: 0;
+}
+
+.message.received .message-bubble {
+  background: white;
+  border-bottom-left-radius: 0;
+}
+
+/* Image with delete button */
+.image-container {
+  position: relative;
+  display: inline-block;
+}
+
+.delete-image-btn {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  background: rgba(255, 255, 255, 0.9);
+  border: none;
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  cursor: pointer;
+  display: none;
+  font-size: 16px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.image-container:hover .delete-image-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Settings Modal */
+.settings-modal {
+  max-width: 500px;
+}
+
+.settings-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 10px;
+}
+
+.tab-btn {
+  flex: 1;
+  padding: 8px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 14px;
+  color: #666;
+  transition: all 0.3s;
+}
+
+.tab-btn.active {
+  color: #25D366;
+  border-bottom: 2px solid #25D366;
+}
+
+.setting-section {
+  padding: 20px 0;
+}
+
+.warning-text {
+  color: #dc3545;
+  margin-bottom: 16px;
+  padding: 12px;
+  background: #fee;
+  border-radius: 8px;
+}
+
+.danger-btn {
+  background: #dc3545;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  width: 100%;
+  transition: all 0.3s;
+}
+
+.danger-btn:hover:not(:disabled) {
+  background: #c82333;
+}
+
+.settings-btn {
+  background: transparent;
+  color: white;
+  border: 1px solid white;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.3s;
+}
+
+.settings-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+}

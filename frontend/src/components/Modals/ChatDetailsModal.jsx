@@ -26,9 +26,9 @@ const ChatDetailsModal = ({ chat, onClose }) => {
 
   const getMemberDisplay = (member) => {
     if (member._id === user._id) {
-      return `${member.name} ${member.surname} (You)`;
+      return `${member.name} ${member.surname || ''} (You)`;
     }
-    return `${member.name} ${member.surname}`;
+    return `${member.name} ${member.surname || ''}`;
   };
 
   const isAdmin = (memberId) => {
@@ -45,6 +45,20 @@ const ChatDetailsModal = ({ chat, onClose }) => {
       setCopiedCode(true);
       setTimeout(() => setCopiedCode(false), 2000);
     }
+  };
+
+  const getProfilePictureUrl = (member) => {
+    if (member.profilePicture?.url) {
+      return `${API_BASE_URL}/${member.profilePicture.url}`;
+    }
+    return null;
+  };
+
+  const getGroupPictureUrl = () => {
+    if (details?.groupPicture?.url) {
+      return `${API_BASE_URL}/${details.groupPicture.url}`;
+    }
+    return null;
   };
 
   if (loading) {
@@ -65,21 +79,19 @@ const ChatDetailsModal = ({ chat, onClose }) => {
           <button onClick={onClose} className="close-btn">✕</button>
         </div>
 
-        {/* Group Picture */}
         {details?.isGroupChat && (
           <div className="group-info-section">
             <div 
               className="group-avatar-large"
-              style={details.groupPicture ? {
-                backgroundImage: `url(${API_BASE_URL}/${details.groupPicture.url})`
+              style={getGroupPictureUrl() ? {
+                backgroundImage: `url(${getGroupPictureUrl()})`
               } : {}}
             >
-              {!details.groupPicture && (details.name?.[0] || 'G').toUpperCase()}
+              {!getGroupPictureUrl() && (details?.name?.[0] || 'G').toUpperCase()}
             </div>
           </div>
         )}
 
-        {/* Invitation Code */}
         {details?.isGroupChat && details?.inviteCode && (
           <div className="invite-code-section">
             <div className="section-title">Invitation Code</div>
@@ -93,46 +105,47 @@ const ChatDetailsModal = ({ chat, onClose }) => {
           </div>
         )}
 
-        {/* Members Section */}
         <div className="members-section">
           <div className="section-title">
             Members ({details?.members?.length || 0})
           </div>
           <div className="members-list">
-            {details?.members?.map(member => (
-              <div key={member._id} className="member-item">
-                <div 
-                  className="member-avatar"
-                  style={member.profilePicture ? {
-                    backgroundImage: `url(${API_BASE_URL}/${member.profilePicture.url})`
-                  } : {}}
-                >
-                  {!member.profilePicture && member.name[0].toUpperCase()}
-                </div>
-                <div className="member-info">
-                  <div className="member-name">
-                    {getMemberDisplay(member)}
+            {details?.members?.map(member => {
+              const profilePicUrl = getProfilePictureUrl(member);
+              return (
+                <div key={member._id} className="member-item">
+                  <div 
+                    className="member-avatar"
+                    style={profilePicUrl ? {
+                      backgroundImage: `url(${profilePicUrl})`
+                    } : {}}
+                  >
+                    {!profilePicUrl && (member.name?.[0] || '?').toUpperCase()}
                   </div>
-                  <div className="member-status">
-                    {isCreator(member._id) && (
-                      <span className="role-badge creator">Creator</span>
-                    )}
-                    {isAdmin(member._id) && !isCreator(member._id) && (
-                      <span className="role-badge admin">Admin</span>
-                    )}
-                    {member.isOnline ? (
-                      <span className="online-status online">● Online</span>
-                    ) : (
-                      <span className="online-status offline">● Offline</span>
-                    )}
+                  <div className="member-info">
+                    <div className="member-name">
+                      {getMemberDisplay(member)}
+                    </div>
+                    <div className="member-status">
+                      {isCreator(member._id) && (
+                        <span className="role-badge creator">Creator</span>
+                      )}
+                      {isAdmin(member._id) && !isCreator(member._id) && (
+                        <span className="role-badge admin">Admin</span>
+                      )}
+                      {member.isOnline ? (
+                        <span className="online-status online">● Online</span>
+                      ) : (
+                        <span className="online-status offline">● Offline</span>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 
-        {/* Chat Info */}
         <div className="chat-info-section">
           <div className="info-item">
             <span className="info-label">Created:</span>
@@ -151,4 +164,5 @@ const ChatDetailsModal = ({ chat, onClose }) => {
     </div>
   );
 };
+
 export default ChatDetailsModal;

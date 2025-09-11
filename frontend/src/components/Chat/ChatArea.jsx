@@ -3,6 +3,7 @@ import { fetchWithToken, API_BASE_URL } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import { getContentType } from '../../utils/helpers';
 import ChatDetailsModal from '../Modals/ChatDetailsModal';
+import GroupSettingsModal from '../Modals/GroupSettingsModal';
 
 const ChatArea = ({ chat, onChatUpdate, onLeaveChat }) => {
   const [messages, setMessages] = useState([]);
@@ -10,6 +11,8 @@ const ChatArea = ({ chat, onChatUpdate, onLeaveChat }) => {
   const [newMessage, setNewMessage] = useState('');
   const [selectedFile, setSelectedFile] = useState(null);
   const [showDetails, setShowDetails] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [chatDetails, setChatDetails] = useState(null);
   const { user } = useAuth();
   const fileInputRef = useRef(null);
   const messagesEndRef = useRef(null);
@@ -17,6 +20,7 @@ const ChatArea = ({ chat, onChatUpdate, onLeaveChat }) => {
   useEffect(() => {
     if (chat) {
       fetchMessages();
+      fetchChatDetails();
     }
   }, [chat]);
 
@@ -28,20 +32,29 @@ const ChatArea = ({ chat, onChatUpdate, onLeaveChat }) => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
+  const fetchChatDetails = async () => {
+    try {
+      const { data } = await fetchWithToken(`/chats/${chat._id}`);
+      if (data) {
+        setChatDetails(data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch chat details');
+    }
+  };
+
   const fetchMessages = async () => {
     setLoading(true);
     try {
       const { data } = await fetchWithToken(`/chats/${chat._id}/messages`);
       if (data.success) {
-        // Handle both data.data.messages and data.data formats
         let messageData = data.data?.messages || data.data || [];
         messageData = Array.isArray(messageData) ? messageData : [];
         
-        // Sort messages by date (oldest first, newest at bottom)
         const sortedMessages = messageData.sort((a, b) => {
           const dateA = new Date(a.createdAt || a.updatedAt);
           const dateB = new Date(b.createdAt || b.updatedAt);
-          return dateA - dateB; // Ascending order (oldest to newest)
+          return dateA - dateB;
         });
         
         setMessages(sortedMessages);
@@ -80,10 +93,19 @@ const ChatArea = ({ chat, onChatUpdate, onLeaveChat }) => {
       const data = await response.json();
       
       if (data.success) {
-        setMessages(prev => [...prev, data.data]);
+        // Properly construct the message with attachment URL if present
+        const newMsg = {
+          ...data.data,
+          attachment: data.data.attachment ? {
+            url: typeof data.data.attachment === 'string' 
+              ? data.data.attachment 
+              : data.data.attachment.url
+          } : null
+        };
+        setMessages(prev => [...prev, newMsg]);
         setNewMessage('');
         setSelectedFile(null);
-        onChatUpdate && onChatUpdate(chat._id, data.data);
+        onChatUpdate && onChatUpdate(chat._id, newMsg);
       }
     } catch (error) {
       console.error('Failed to send message:', error);
@@ -116,21 +138,46 @@ const ChatArea = ({ chat, onChatUpdate, onLeaveChat }) => {
     if (!confirm(message)) return;
     
     try {
-      // Using the correct endpoint with /me
-      const { data, status } = await fetchWithToken(`/chats/${chat._id}/members/me`, {
+      // Different endpoints for group and direct chats
+      const endpoint = chat.isGroupChat 
+        ? `/chats/${chat._id}/members/me`
+        : `/chats/${chat._id}`;
+      
+      const { data, status } = await fetchWithToken(endpoint, {
         method: 'DELETE'
       });
 
       if (status === 200 || status === 204 || data?.success) {
         onLeaveChat(chat._id);
       } else {
-        console.error('Failed to leave chat:', data);
-        alert(data?.errorMessage || 'Failed to leave chat');
+        alert(data?.errorMessage || 'Failed to leave/hide chat');
       }
     } catch (error) {
-      console.error('Failed to leave chat:', error);
-      alert('Failed to leave chat');
+      console.error('Failed to leave/hide chat:', error);
+      alert('Failed to leave/hide chat');
     }
+  };
+
+  const deleteImage = async (messageId) => {
+    if (!confirm('Delete this image?')) return;
+    
+    try {
+      const { data } = await fetchWithToken(`/chats/${chat._id}/messages/${messageId}`, {
+        method: 'DELETE'
+      });
+
+      if (data.success) {
+        setMessages(prev => prev.map(msg => 
+          msg._id === messageId ? { ...msg, isDeleted: true } : msg
+        ));
+      }
+    } catch (error) {
+      console.error('Failed to delete image:', error);
+    }
+  };
+
+  const isUserAdmin = () => {
+    return chatDetails?.admins?.includes(user?._id);
   };
 
   const renderMessageContent = (msg) => {
@@ -138,18 +185,16 @@ const ChatArea = ({ chat, onChatUpdate, onLeaveChat }) => {
       return <div className="deleted-message">This message was deleted</div>;
     }
 
-    // Handle attachment URL properly
     let attachmentUrl = null;
     if (msg.attachment) {
-      // If attachment is an object with url property
       if (msg.attachment.url) {
         attachmentUrl = `${API_BASE_URL}/${msg.attachment.url.replace(/^\//, '')}`;
-      } 
-      // If attachment is a string (ID or path)
-      else if (typeof msg.attachment === 'string') {
+      } else if (typeof msg.attachment === 'string') {
         attachmentUrl = `${API_BASE_URL}/uploads/${msg.attachment}`;
       }
     }
+
+    const isMyMessage = msg.sender?._id === user?._id;
 
     switch(msg.contentType) {
       case 'emoji':
@@ -157,15 +202,27 @@ const ChatArea = ({ chat, onChatUpdate, onLeaveChat }) => {
       
       case 'image':
         return attachmentUrl ? (
-          <img 
-            src={attachmentUrl} 
-            alt="Image" 
-            className="image-content"
-            onError={(e) => {
-              console.error('Image load error:', e);
-              e.target.style.display = 'none';
-            }}
-          />
+          <div className="image-container">
+            <img 
+              src={attachmentUrl} 
+              alt="Image" 
+              className="image-content"
+              onError={(e) => {
+                e.target.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect width="100" height="100" fill="%23ddd"/%3E%3Ctext x="50%" y="50%" text-anchor="middle" dy=".3em" fill="%23999"%3EImage Error%3C/text%3E%3C/svg%3E';
+              }}
+            />
+            {isMyMessage && (
+              <button 
+                className="delete-image-btn"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  deleteImage(msg._id);
+                }}
+              >
+                🗑️
+              </button>
+            )}
+          </div>
         ) : <div>Image not available</div>;
       
       case 'video':
@@ -200,12 +257,25 @@ const ChatArea = ({ chat, onChatUpdate, onLeaveChat }) => {
         return (
           <div className="hybrid-content">
             {attachmentUrl && (
-              <img 
-                src={attachmentUrl} 
-                alt="Attachment" 
-                className="hybrid-image"
-                onError={(e) => e.target.style.display = 'none'}
-              />
+              <div className="image-container">
+                <img 
+                  src={attachmentUrl} 
+                  alt="Attachment" 
+                  className="hybrid-image"
+                  onError={(e) => e.target.style.display = 'none'}
+                />
+                {isMyMessage && (
+                  <button 
+                    className="delete-image-btn"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      deleteImage(msg._id);
+                    }}
+                  >
+                    🗑️
+                  </button>
+                )}
+              </div>
             )}
             {msg.content && <div className="hybrid-text">{msg.content}</div>}
           </div>
@@ -225,13 +295,11 @@ const ChatArea = ({ chat, onChatUpdate, onLeaveChat }) => {
     );
   }
 
-  // Safe access to displayName with fallback
   const chatDisplayName = chat.displayName || chat.name || 'Chat';
   const firstLetter = chatDisplayName[0]?.toUpperCase() || '?';
 
   return (
     <div className="chat-area">
-      {/* Chat Header */}
       <div className="chat-header">
         <div 
           className="chat-avatar"
@@ -251,53 +319,62 @@ const ChatArea = ({ chat, onChatUpdate, onLeaveChat }) => {
           <button onClick={() => setShowDetails(true)} className="details-btn">
             ℹ️ Details
           </button>
+          {chat.isGroupChat && isUserAdmin() && (
+            <button onClick={() => setShowSettings(true)} className="settings-btn">
+              ⚙️ Settings
+            </button>
+          )}
           <button onClick={handleLeaveChat} className="leave-btn">
             {chat.isGroupChat ? 'Leave' : 'Hide'}
           </button>
         </div>
       </div>
 
-      {/* Messages Area */}
       <div className="messages-container">
         {loading ? (
           <div className="loading">Loading messages...</div>
         ) : messages.length === 0 ? (
           <div className="no-messages">No messages yet. Start the conversation!</div>
         ) : (
-          messages.map((msg) => {
-            const isMyMessage = msg.sender?._id === user?._id;
-            const senderName = msg.sender?._id === user?._id 
-              ? 'You' 
-              : msg.sender?.name || 'Unknown';
+          <div className="messages-wrapper">
+            {messages.map((msg) => {
+              const isMyMessage = msg.sender?._id === user?._id;
+              const senderName = msg.sender?._id === user?._id 
+                ? 'You' 
+                : msg.sender?.name || 'Unknown';
 
-            return (
-              <div
-                key={msg._id}
-                className={`message ${isMyMessage ? 'sent' : 'received'}`}
-                onContextMenu={(e) => {
-                  if (isMyMessage && !msg.isDeleted) {
-                    e.preventDefault();
-                    deleteMessage(msg._id);
-                  }
-                }}
-              >
-                <div className="message-bubble">
-                  {!isMyMessage && chat.isGroupChat && (
-                    <div className="message-sender">{senderName}</div>
-                  )}
-                  {renderMessageContent(msg)}
-                  <div className="message-time">
-                    {new Date(msg.updatedAt || msg.createdAt).toLocaleTimeString()}
+              return (
+                <div
+                  key={msg._id}
+                  className={`message-row ${isMyMessage ? 'message-row-sent' : 'message-row-received'}`}
+                >
+                  <div
+                    className={`message ${isMyMessage ? 'sent' : 'received'}`}
+                    onContextMenu={(e) => {
+                      if (isMyMessage && !msg.isDeleted) {
+                        e.preventDefault();
+                        deleteMessage(msg._id);
+                      }
+                    }}
+                  >
+                    <div className="message-bubble">
+                      {!isMyMessage && chat.isGroupChat && (
+                        <div className="message-sender">{senderName}</div>
+                      )}
+                      {renderMessageContent(msg)}
+                      <div className="message-time">
+                        {new Date(msg.updatedAt || msg.createdAt).toLocaleTimeString()}
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
-            );
-          })
+              );
+            })}
+            <div ref={messagesEndRef} />
+          </div>
         )}
-        <div ref={messagesEndRef} />
       </div>
 
-      {/* File Preview */}
       {selectedFile && (
         <div className="file-preview">
           <span className="file-name">📎 {selectedFile.name}</span>
@@ -307,7 +384,6 @@ const ChatArea = ({ chat, onChatUpdate, onLeaveChat }) => {
         </div>
       )}
 
-      {/* Message Input */}
       <div className="message-input-container">
         <input
           ref={fileInputRef}
@@ -332,11 +408,21 @@ const ChatArea = ({ chat, onChatUpdate, onLeaveChat }) => {
         </button>
       </div>
 
-      {/* Chat Details Modal */}
       {showDetails && (
         <ChatDetailsModal 
           chat={chat} 
           onClose={() => setShowDetails(false)} 
+        />
+      )}
+
+      {showSettings && (
+        <GroupSettingsModal
+          chat={chat}
+          onClose={() => setShowSettings(false)}
+          onUpdate={() => {
+            fetchChatDetails();
+            onChatUpdate && onChatUpdate(chat._id);
+          }}
         />
       )}
     </div>

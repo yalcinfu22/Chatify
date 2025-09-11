@@ -74,12 +74,22 @@ export default class MessageService {
             
             // Adım D: Her şey yolunda, tüm değişiklikleri onayla.
             await session.commitTransaction();
-            const populatedMessage = await newMessage.populate('sender', 'name username profilePicture'); // bu satır aslında repository'de olmalı
+
+            // Commit'ten sonra populate yap // sessionsuz populate'ler sonra ypaılır
+            const populatedMessage = await newMessage.populate([
+              {
+                path: 'sender',
+                select: 'name username profilePicture',
+                populate: { path: 'profilePicture', select: 'url', model: 'Image' }
+              },
+              { path: 'attachment', select: 'url', model: 'Image' }
+            ]);
+          
             return {
-                success: true,
-                statusCode: 201, // 201 Created
-                message: "Mesaj başarıyla gönderildi.",
-                data: populatedMessage
+              success: true,
+              statusCode: 201,
+              message: "Mesaj başarıyla gönderildi.",
+              data: populatedMessage
             };
 
         } catch (error) {
