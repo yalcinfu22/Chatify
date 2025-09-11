@@ -4,6 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { getContentType } from '../../utils/helpers';
 import ChatDetailsModal from '../Modals/ChatDetailsModal';
 import GroupSettingsModal from '../Modals/GroupSettingsModal';
+import { toast } from 'react-hot-toast'; // will be used in the future
 
 const ChatArea = ({ chat, onChatUpdate, onLeaveChat }) => {
   const [messages, setMessages] = useState([]);
@@ -12,15 +13,17 @@ const ChatArea = ({ chat, onChatUpdate, onLeaveChat }) => {
   const [selectedFile, setSelectedFile] = useState(null);
   const [showDetails, setShowDetails] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
-  const [chatDetails, setChatDetails] = useState(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const { user } = useAuth();
   const fileInputRef = useRef(null);
   const messagesEndRef = useRef(null);
-
   useEffect(() => {
-    if (chat) {
+    // Hem chat hem de user yüklendiğinde fonksiyonları çalıştır
+    if (chat && user) {
       fetchMessages();
-      fetchChatDetails();
+      if (chat.isGroupChat) {
+        checkAdminStatus();
+      }
     }
   }, [chat]);
 
@@ -32,14 +35,14 @@ const ChatArea = ({ chat, onChatUpdate, onLeaveChat }) => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  const fetchChatDetails = async () => {
+  const checkAdminStatus = async () => {
     try {
       const { data } = await fetchWithToken(`/chats/${chat._id}`);
-      if (data) {
-        setChatDetails(data);
+      if (data && data.admins) {
+        setIsAdmin(data.admins.includes(user.id));
       }
     } catch (error) {
-      console.error('Failed to fetch chat details');
+      console.error('Failed to check admin status');
     }
   };
 
@@ -93,7 +96,6 @@ const ChatArea = ({ chat, onChatUpdate, onLeaveChat }) => {
       const data = await response.json();
       
       if (data.success) {
-        // Properly construct the message with attachment URL if present
         const newMsg = {
           ...data.data,
           attachment: data.data.attachment ? {
@@ -138,7 +140,6 @@ const ChatArea = ({ chat, onChatUpdate, onLeaveChat }) => {
     if (!confirm(message)) return;
     
     try {
-      // Different endpoints for group and direct chats
       const endpoint = chat.isGroupChat 
         ? `/chats/${chat._id}/members/me`
         : `/chats/${chat._id}`;
@@ -158,31 +159,9 @@ const ChatArea = ({ chat, onChatUpdate, onLeaveChat }) => {
     }
   };
 
-  const deleteImage = async (messageId) => {
-    if (!confirm('Delete this image?')) return;
-    
-    try {
-      const { data } = await fetchWithToken(`/chats/${chat._id}/messages/${messageId}`, {
-        method: 'DELETE'
-      });
-
-      if (data.success) {
-        setMessages(prev => prev.map(msg => 
-          msg._id === messageId ? { ...msg, isDeleted: true } : msg
-        ));
-      }
-    } catch (error) {
-      console.error('Failed to delete image:', error);
-    }
-  };
-
-  const isUserAdmin = () => {
-    return chatDetails?.admins?.includes(user?._id);
-  };
-
   const renderMessageContent = (msg) => {
     if (msg.isDeleted) {
-      return <div className="deleted-message">This message was deleted</div>;
+      return <div style={{ fontStyle: 'italic', color: '#999' }}>This message was deleted</div>;
     }
 
     let attachmentUrl = null;
@@ -198,26 +177,48 @@ const ChatArea = ({ chat, onChatUpdate, onLeaveChat }) => {
 
     switch(msg.contentType) {
       case 'emoji':
-        return <div className="emoji-content">{msg.content}</div>;
+        return <div style={{ fontSize: '48px' }}>{msg.content}</div>;
       
       case 'image':
+      case 'gif':
         return attachmentUrl ? (
-          <div className="image-container">
+          <div style={{ position: 'relative', display: 'inline-block' }}>
             <img 
               src={attachmentUrl} 
-              alt="Image" 
-              className="image-content"
+              alt={msg.contentType === 'gif' ? 'GIF' : 'Image'}
+              style={{ 
+                maxWidth: '300px', 
+                borderRadius: '8px', 
+                display: 'block' 
+              }}
               onError={(e) => {
-                e.target.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect width="100" height="100" fill="%23ddd"/%3E%3Ctext x="50%" y="50%" text-anchor="middle" dy=".3em" fill="%23999"%3EImage Error%3C/text%3E%3C/svg%3E';
+                e.target.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect width="100" height="100" fill="%23ddd"/%3E%3Ctext x="50%" y="50%" text-anchor="middle" dy=".3em" fill="%23999"%3EError%3C/text%3E%3C/svg%3E';
               }}
             />
             {isMyMessage && (
               <button 
-                className="delete-image-btn"
+                style={{
+                  position: 'absolute',
+                  top: '5px',
+                  right: '5px',
+                  background: 'rgba(255, 255, 255, 0.9)',
+                  border: 'none',
+                  borderRadius: '50%',
+                  width: '30px',
+                  height: '30px',
+                  cursor: 'pointer',
+                  fontSize: '16px',
+                  boxShadow: '0 2px 4px rgba(0, 0, 0, 0.2)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
                 onClick={(e) => {
                   e.stopPropagation();
-                  deleteImage(msg._id);
+                  deleteMessage(msg._id);
                 }}
+                onMouseEnter={(e) => e.target.style.background = 'rgba(255, 255, 255, 1)'}
+                onMouseLeave={(e) => e.target.style.background = 'rgba(255, 255, 255, 0.9)'}
               >
                 🗑️
               </button>
@@ -227,19 +228,10 @@ const ChatArea = ({ chat, onChatUpdate, onLeaveChat }) => {
       
       case 'video':
         return attachmentUrl ? (
-          <video controls className="video-content">
+          <video controls style={{ maxWidth: '300px', borderRadius: '8px' }}>
             <source src={attachmentUrl} />
           </video>
         ) : <div>Video not available</div>;
-      
-      case 'gif':
-        return attachmentUrl ? (
-          <img 
-            src={attachmentUrl} 
-            alt="GIF" 
-            className="gif-content"
-          />
-        ) : <div>GIF not available</div>;
       
       case 'link':
         return (
@@ -247,7 +239,7 @@ const ChatArea = ({ chat, onChatUpdate, onLeaveChat }) => {
             href={msg.content} 
             target="_blank" 
             rel="noopener noreferrer" 
-            className="link-content"
+            style={{ color: '#0066cc', textDecoration: 'underline' }}
           >
             {msg.content}
           </a>
@@ -255,21 +247,36 @@ const ChatArea = ({ chat, onChatUpdate, onLeaveChat }) => {
       
       case 'hybrid':
         return (
-          <div className="hybrid-content">
+          <div>
             {attachmentUrl && (
-              <div className="image-container">
+              <div style={{ position: 'relative', display: 'inline-block', marginBottom: '8px' }}>
                 <img 
                   src={attachmentUrl} 
                   alt="Attachment" 
-                  className="hybrid-image"
+                  style={{ maxWidth: '300px', borderRadius: '8px', display: 'block' }}
                   onError={(e) => e.target.style.display = 'none'}
                 />
                 {isMyMessage && (
                   <button 
-                    className="delete-image-btn"
+                    style={{
+                      position: 'absolute',
+                      top: '5px',
+                      right: '5px',
+                      background: 'rgba(255, 255, 255, 0.9)',
+                      border: 'none',
+                      borderRadius: '50%',
+                      width: '30px',
+                      height: '30px',
+                      cursor: 'pointer',
+                      fontSize: '16px',
+                      boxShadow: '0 2px 4px rgba(0, 0, 0, 0.2)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}
                     onClick={(e) => {
                       e.stopPropagation();
-                      deleteImage(msg._id);
+                      deleteMessage(msg._id);
                     }}
                   >
                     🗑️
@@ -277,7 +284,7 @@ const ChatArea = ({ chat, onChatUpdate, onLeaveChat }) => {
                 )}
               </div>
             )}
-            {msg.content && <div className="hybrid-text">{msg.content}</div>}
+            {msg.content && <div>{msg.content}</div>}
           </div>
         );
       
@@ -319,8 +326,19 @@ const ChatArea = ({ chat, onChatUpdate, onLeaveChat }) => {
           <button onClick={() => setShowDetails(true)} className="details-btn">
             ℹ️ Details
           </button>
-          {chat.isGroupChat && isUserAdmin() && (
-            <button onClick={() => setShowSettings(true)} className="settings-btn">
+          {chat.isGroupChat && isAdmin && (
+            <button 
+              onClick={() => setShowSettings(true)} 
+              style={{
+                background: 'transparent',
+                color: 'white',
+                border: '1px solid white',
+                padding: '6px 12px',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontSize: '12px'
+              }}
+            >
               ⚙️ Settings
             </button>
           )}
@@ -336,43 +354,54 @@ const ChatArea = ({ chat, onChatUpdate, onLeaveChat }) => {
         ) : messages.length === 0 ? (
           <div className="no-messages">No messages yet. Start the conversation!</div>
         ) : (
-          <div className="messages-wrapper">
-            {messages.map((msg) => {
-              const isMyMessage = msg.sender?._id === user?._id;
-              const senderName = msg.sender?._id === user?._id 
-                ? 'You' 
-                : msg.sender?.name || 'Unknown';
+          messages.map((msg) => {
+            const isMyMessage = msg.sender?._id === user?._id;
+            const senderName = msg.sender?._id === user?._id 
+              ? 'You' 
+              : msg.sender?.name || 'Unknown';
 
-              return (
+            return (
+              <div
+                key={msg._id}
+                style={{
+                  display: 'flex',
+                  justifyContent: isMyMessage ? 'flex-end' : 'flex-start',
+                  marginBottom: '12px',
+                  width: '100%'
+                }}
+              >
                 <div
-                  key={msg._id}
-                  className={`message-row ${isMyMessage ? 'message-row-sent' : 'message-row-received'}`}
+                  style={{
+                    maxWidth: '70%',
+                    padding: '8px 12px',
+                    borderRadius: '8px',
+                    background: isMyMessage ? '#dcf8c6' : 'white',
+                    boxShadow: '0 1px 2px rgba(0, 0, 0, 0.1)',
+                    borderBottomRightRadius: isMyMessage ? '0' : '8px',
+                    borderBottomLeftRadius: isMyMessage ? '8px' : '0'
+                  }}
+                  onContextMenu={(e) => {
+                    if (isMyMessage && !msg.isDeleted) {
+                      e.preventDefault();
+                      deleteMessage(msg._id);
+                    }
+                  }}
                 >
-                  <div
-                    className={`message ${isMyMessage ? 'sent' : 'received'}`}
-                    onContextMenu={(e) => {
-                      if (isMyMessage && !msg.isDeleted) {
-                        e.preventDefault();
-                        deleteMessage(msg._id);
-                      }
-                    }}
-                  >
-                    <div className="message-bubble">
-                      {!isMyMessage && chat.isGroupChat && (
-                        <div className="message-sender">{senderName}</div>
-                      )}
-                      {renderMessageContent(msg)}
-                      <div className="message-time">
-                        {new Date(msg.updatedAt || msg.createdAt).toLocaleTimeString()}
-                      </div>
+                  {!isMyMessage && chat.isGroupChat && (
+                    <div style={{ fontSize: '11px', color: '#25D366', marginBottom: '4px', fontWeight: 'bold' }}>
+                      {senderName}
                     </div>
+                  )}
+                  {renderMessageContent(msg)}
+                  <div style={{ fontSize: '10px', color: '#999', textAlign: 'right', marginTop: '4px' }}>
+                    {new Date(msg.updatedAt || msg.createdAt).toLocaleTimeString()}
                   </div>
                 </div>
-              );
-            })}
-            <div ref={messagesEndRef} />
-          </div>
+              </div>
+            );
+          })
         )}
+        <div ref={messagesEndRef} />
       </div>
 
       {selectedFile && (
@@ -420,7 +449,7 @@ const ChatArea = ({ chat, onChatUpdate, onLeaveChat }) => {
           chat={chat}
           onClose={() => setShowSettings(false)}
           onUpdate={() => {
-            fetchChatDetails();
+            checkAdminStatus();
             onChatUpdate && onChatUpdate(chat._id);
           }}
         />
