@@ -104,7 +104,7 @@ const ChatDetailsModal = ({ chat, onClose }) => {
                 <div 
                   className="member-avatar"
                   style={member.profilePicture ? {
-                    backgroundImage: `url(${API_BASE_URL}/${member.profilePicture})`
+                    backgroundImage: `url(${API_BASE_URL}/${member.profilePicture.url})`
                   } : {}}
                 >
                   {!member.profilePicture && member.name[0].toUpperCase()}

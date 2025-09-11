@@ -96,29 +96,41 @@ export default class ChatRepository {
             const chat = await Chat.findById(chatId)
                 .populate({
                     path: 'members',
-                    select: 'profilePicture name surname isOnline',
-                    model: 'User' // Adjust model name if different
+                    select: 'name surname isOnline profilePicture',
+                    model: 'User',
+                    populate: {
+                        path: 'profilePicture',
+                        select: 'url',
+                        model: 'Image'
+                    }
                 })
                 .populate({
                     path: 'groupPicture',
                     select: 'url',
                     model: 'Image'
                 })
-                .lean(); // Use lean() for better performance if you don't need Mongoose documents
+                .lean();
             
             if (!chat) {
                 throw new Error('Chat not found');
             }
-            
-            // normalize groupPicture so frontend always gets an object
+        
+            // normalize groupPicture
             chat.groupPicture = chat.groupPicture || { url: null };
-
+        
+            // normalize member profilePictures
+            chat.members = chat.members.map(member => ({
+                ...member,
+                profilePicture: member.profilePicture || { url: null }
+            }));
+        
             return chat;
         } catch (error) {
             console.error('getChatDetails repository error:', error);
             throw error;
         }
     }
+
 
     async findNonDeletedById(chatId, options = {}) {
         try {
