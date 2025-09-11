@@ -25,7 +25,7 @@ const ChatArea = ({ chat, onChatUpdate, onLeaveChat }) => {
         checkAdminStatus();
       }
     }
-  }, [chat]);
+  }, [chat, user]);
 
   useEffect(() => {
     scrollToBottom();
@@ -55,12 +55,12 @@ const ChatArea = ({ chat, onChatUpdate, onLeaveChat }) => {
         messageData = Array.isArray(messageData) ? messageData : [];
         
         const sortedMessages = messageData.sort((a, b) => {
-          const dateA = new Date(a.createdAt || a.updatedAt);
-          const dateB = new Date(b.createdAt || b.updatedAt);
+          const dateA = new Date(a.createdAt);
+          const dateB = new Date(b.createdAt);
           return dateA - dateB;
         });
         
-        setMessages(sortedMessages);
+        setMessages((sortedMessages).reverse());
       }
     } catch (error) {
       console.error('Failed to fetch messages:', error);
@@ -324,7 +324,7 @@ const ChatArea = ({ chat, onChatUpdate, onLeaveChat }) => {
         </div>
         <div className="chat-header-actions">
           <button onClick={() => setShowDetails(true)} className="details-btn">
-            ℹ️ Details
+            ⓘ Details
           </button>
           {chat.isGroupChat && isAdmin && (
             <button 
@@ -355,11 +355,21 @@ const ChatArea = ({ chat, onChatUpdate, onLeaveChat }) => {
           <div className="no-messages">No messages yet. Start the conversation!</div>
         ) : (
           messages.map((msg) => {
-            const isMyMessage = msg.sender?._id === user?._id;
-            const senderName = msg.sender?._id === user?._id 
+            const isMyMessage = msg.sender?._id === user?.id;
+            const senderName = msg.sender?._id === user?.id 
               ? 'You' 
               : msg.sender?.name || 'Unknown';
 
+          if (msg.content) { // Sadece içeriği olan mesajları loglayalım
+            console.group(`Mesaj Analizi: "${msg.content}"`);
+            console.log("Gelen Mesaj Obj:", msg);
+            console.log("Mevcut Kullanıcı Obj:", user);
+            console.log("------ Karşılaştırma ------");
+            console.log("msg.sender.id ->", msg.sender?._id, `(Tipi: ${typeof msg.sender?._id})`);
+            console.log("user.id ->", user?.id, `(Tipi: ${typeof user?.id})`);
+            console.log("Sonuç (isMyMessage):", isMyMessage);
+            console.groupEnd();
+          }
             return (
               <div
                 key={msg._id}

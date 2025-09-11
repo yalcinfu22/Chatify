@@ -6,7 +6,9 @@ import { Toaster } from './../node_modules/react-hot-toast/src/components/toaste
 
 createRoot(document.getElementById('root')).render(
   //<StrictMode>
+  <>
     <App />,
     <Toaster />
+  </>
   //</StrictMode>
 )
