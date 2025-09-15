@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { AuthProvider } from './contexts/AuthContext';
+import { SocketProvider } from './contexts/SocketContext'; // Add this
 import AuthPage from './components/Auth/AuthPage';
 import MainChat from './components/Chat/MainChat';
 
@@ -15,11 +16,13 @@ function App() {
 
   return (
     <AuthProvider>
-      {isAuthenticated ? (
-        <MainChat />
-      ) : (
-        <AuthPage onAuthSuccess={() => setIsAuthenticated(true)} />
-      )}
+      <SocketProvider>
+        {isAuthenticated ? (
+          <MainChat />
+        ) : (
+          <AuthPage onAuthSuccess={() => setIsAuthenticated(true)} />
+        )}
+      </SocketProvider>
     </AuthProvider>
   );
 }

@@ -2,10 +2,10 @@ import express from "express"; // node.js framework'ü olan express.js kullandı
 import mongoose from "mongoose"; // ORM (Object Relational Mapping) for MongoDB (.NET teki Entity Framework gibi, DB şema ve mapping işlemleri)
 import cors from "cors"; // farklı port veya domainde tarayıcı cors hatası vermemesi için kullandık.
 import consola from "consola"; // konsolda hatalar ve success ler renkli görünmesi için kullandık
-import { fileURLToPath } from 'url';  // ← ADD THIS
+import { fileURLToPath } from 'url'; 
 import { createServer } from "http"; // node http server create
 import path from "path";
-
+import { initializeSocket } from "./socket.js";
 import { URL, PORT } from "./config/index.js"; // config => .env port ve db bilgilerine tek yerden erişmek için
 
 const { success, error } = consola; // consola destructuring
@@ -71,8 +71,9 @@ const startApp = async () => {
       success({
         message: `successfully connected with db on PORT : ${port}`,
         badge: true,
-      })
+      }),
     );
+    initializeSocket(httpServer)
   } catch (err) {
     // Hata!
     error({

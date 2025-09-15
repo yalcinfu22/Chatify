@@ -28,4 +28,22 @@ export default class AuthorizationController {
             });
         }
     }
+
+    verifySocketToken(socket, next) {
+        var token = socket.handshake.auth.token;
+        token = token.replace("Bearer ", "");
+        console.log(token)
+
+        if (!token) {
+            return next(new Error('Authentication error: Token not provided'));
+        }
+        jwt.verify(token, SECRET, (err, decoded) => {
+            if (err) {
+                return next(new Error('Authentication error: Invalid token'));
+            }
+            // Token geçerliyse, kullanıcı bilgilerini socket objesine ekle
+            socket.user = decoded;
+            next(); // Bağlantıya izin ver
+        });
+    }
 }
