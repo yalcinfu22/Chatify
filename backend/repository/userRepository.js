@@ -21,11 +21,11 @@ export default class UserRepository {
 
         return user;
     }
-    async setUserOnline(userId) {
+    async setUserStatus(userId, status) {
         try {
             return await User.findByIdAndUpdate(
                 userId, 
-                { isOnline: true }, 
+                { isOnline: status }, 
                 { new: true }
             );
         } catch (error) {
@@ -49,6 +49,20 @@ export default class UserRepository {
         } catch (error) {
             console.error(`Repository Error: addChatToUser - ${error.message}`);
             throw new Error("Kullanıcının sohbet listesi güncellenirken veritabanı hatası oluştu.");
+        }
+    }
+    async findUserChatIds(userId) {
+        try {
+            // Kullanıcıyı ID'sine göre bul.
+            // .select('chats'): Dökümanın tamamı yerine SADECE 'chats' alanını getir.
+            // .lean(): Mongoose'un karmaşık döküman objesi yerine, saf bir JavaScript objesi döndürür. Bu, sadece okuma yapacağımız için çok daha hızlıdır.
+            const user = await User.findById(userId).select('chats').lean();
+            
+            // Eğer kullanıcı bulunduysa onun sohbet dizisini, bulunamadıysa boş bir dizi döndür.
+            return user ? user.chats : [];
+        } catch (error) {
+            console.error(`Repository Error: findUserChatIds - ${error.message}`);
+            throw new Error("Kullanıcının sohbetleri bulunurken bir hata oluştu.");
         }
     }
     async addChatToUsers(userIds, chatId) {

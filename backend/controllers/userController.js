@@ -27,7 +27,6 @@ export default class UserController {
     try {
       const { username, password } = req.body;
       const result = await userService.login(username, password);
-      
       if (!result.success) {
         return res.status(400).send(result); // 400 Bad Request
       }
