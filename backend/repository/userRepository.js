@@ -21,6 +21,18 @@ export default class UserRepository {
 
         return user;
     }
+    async setUserOnline(userId) {
+        try {
+            return await User.findByIdAndUpdate(
+                userId, 
+                { isOnline: true }, 
+                { new: true }
+            );
+        } catch (error) {
+            console.log("Error in setUserOnline repository")
+            throw error
+        }
+    }
     async saveUser(newUser) {
         const user = new User(newUser);
         const result = await user.save(); 

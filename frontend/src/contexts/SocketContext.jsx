@@ -22,7 +22,6 @@ export const SocketProvider = ({ children }) => {
       const newSocket = io('http://localhost:3001', {
         auth: {
           token: localStorage.getItem('token'),
-          userId: user.id // actually in the token but for ease 
         }
       });
 
@@ -34,15 +33,14 @@ export const SocketProvider = ({ children }) => {
           userName: user.name,
           socketId: newSocket.id
         });
+        setSocket(newSocket); // only set when properly connected
       });
 
       newSocket.on('disconnect', () => {
         console.log('Disconnected from server');
       });
 
-      setSocket(newSocket);
-
-      // Cleanup when component unmounts or user logs out
+      // Cleanup function
       return () => {
         newSocket.disconnect();
       };

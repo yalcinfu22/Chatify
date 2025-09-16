@@ -9,6 +9,7 @@ export default class ResponseSerializer {
             username: user.username,
             phone: user.phone,
             token: `Bearer ${token}`,
+            isOnline: user.isOnline,
             expiresIn: date.setDate(date.getDate() + 30), // 30 gün vermiştik
         };
     }
