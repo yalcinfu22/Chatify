@@ -7,6 +7,10 @@ import { createServer } from "http"; // node http server create
 import path from "path";
 import { initializeSocket } from "./socket.js";
 import { URL, PORT } from "./config/index.js"; // config => .env port ve db bilgilerine tek yerden erişmek için
+import { instrument } from '@socket.io/admin-ui';
+
+import Auth from './utils/auth.js'
+const auth = new Auth();
 
 const { success, error } = consola; // consola destructuring
 
@@ -31,14 +35,15 @@ const startApp = async () => {
     await mongoose.connect(URL);
     
     const corsOptions = {
-      origin: "http://localhost:5173",
+      origin: ["http://localhost:5173", "http://localhost:3001"],
+      credentials: true,
       optionsSuccessStatus: 200,
     };
     
     app.use(cors(corsOptions));
 
     app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-
+    app.use(express.static('./node_modules/@socket.io/admin-ui/ui/dist'))
     // api dosya gönderim ve alım limiti 50mb
     app.use(express.json({ limit: "50mb", extended: true }));
     app.use(express.urlencoded({ limit: "50mb", extended: true }));
@@ -67,13 +72,25 @@ const startApp = async () => {
     
     // DB ye bağlandık
     // Node server 'ı ayağa kaldırıyoruz
+    const io = initializeSocket(httpServer)
+
+    const password = await auth.hashPassword("adminuser")
+
+    instrument(io, {
+      auth: {
+        type: "basic",
+        username: "admin",
+        password: password // password is adminuser
+      },
+      mode: "development"
+    });
+
     httpServer.listen(port, () =>
       success({
         message: `successfully connected with db on PORT : ${port}`,
         badge: true,
       }),
     );
-    initializeSocket(httpServer)
   } catch (err) {
     // Hata!
     error({

@@ -20,6 +20,7 @@ export const SocketProvider = ({ children }) => {
     if (isAuthenticated && user) {
       // Create socket connection
       const newSocket = io('http://localhost:3001', {
+        withCredentials: true,
         auth: {
           token: localStorage.getItem('token'),
         }
@@ -27,12 +28,7 @@ export const SocketProvider = ({ children }) => {
 
       newSocket.on('connect', () => {
         console.log('Connected! Socket ID:', newSocket.id);
-        // Send user info to backend so you can log it
-        newSocket.emit('user_connected', {
-          userId: user.id,
-          userName: user.name,
-          socketId: newSocket.id
-        });
+
         setSocket(newSocket); // only set when properly connected
       });
 

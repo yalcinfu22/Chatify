@@ -32,7 +32,6 @@ export default class AuthorizationController {
     verifySocketToken(socket, next) {
         var token = socket.handshake.auth.token;
         token = token.replace("Bearer ", "");
-        console.log(token)
 
         if (!token) {
             return next(new Error('Authentication error: Token not provided'));
