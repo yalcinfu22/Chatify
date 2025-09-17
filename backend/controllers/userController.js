@@ -57,4 +57,17 @@ export default class UserController {
       });
     }
   }
+
+  async verify(req, res) {
+    const {userId, username, phone} = req.user;
+    const result = {
+      success: true,
+      data: {
+        user_id: userId,
+        username: username,
+        phone: phone
+      }
+    }
+    return res.status(200).send(result)
+  }
 }

@@ -6,8 +6,8 @@ import { check, param } from "express-validator"
 import ValidationController from "../controllers/validationController.js";
 const validationController = new ValidationController();
 
-// import AuthorizationController from "../controllers/authorizationController.js";
-// const authorizationController = new AuthorizationController();
+import AuthorizationController from "../controllers/authorizationController.js";
+const authorizationController = new AuthorizationController();
 
 import UserController from "../controllers/userController.js";
 const userController = new UserController();
@@ -43,5 +43,11 @@ router.post( // FORM DATA WILL BE SENT
   validationController.validateRequest,
   userController.register
 );
+
+router.post(
+  "/verify",
+  authorizationController.validateToken,
+  userController.verify
+)
 
 export default router;

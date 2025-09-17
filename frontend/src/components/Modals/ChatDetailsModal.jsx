@@ -35,11 +35,11 @@ const ChatDetailsModal = ({ chat, onClose }) => {
 
     socket.on("user-status-changed", handleStatusChange);
 
-    // cleanup (önemli!)
+    // cleanup function
     return () => {
       socket.off("user-status-changed", handleStatusChange);
     };
-  }, [socket]);
+  }, [socket]); // login logout CHANGES socket
 
   const fetchChatDetails = async () => {
     try {

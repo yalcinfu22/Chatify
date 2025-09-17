@@ -15,7 +15,6 @@ export default class AuthorizationController {
 
         try {
             var token = req.headers.token.replace("Bearer ", "");
-
             var decoded = jwt.verify(token, SECRET);
             decoded.token = req.headers.token;
             req.user = decoded; 
