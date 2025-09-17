@@ -25,11 +25,19 @@ const MainChat = () => {
   }, []);
 
   const handleChatUpdate = (chatId, newMessage) => {
-    setChats(prev => prev.map(chat => 
+    setChats(prev => { 
+      const updatedChats = prev.map(chat => 
       chat._id === chatId 
-        ? { ...chat, latestMessage: newMessage, lastMessageTime: newMessage.updatedAt }
+        ? { ...chat, latestMessage: newMessage, updatedAt: newMessage.createdAt }
         : chat
-    ));
+      );
+      const sortedChats = [...updatedChats].sort((a, b) => {
+        const dateA = new Date(a.updatedAt);
+        const dateB = new Date(b.updatedAt);
+        return dateB - dateA;
+      });
+      return sortedChats
+    });
   };
 
   const handleLeaveChat = (chatId) => {

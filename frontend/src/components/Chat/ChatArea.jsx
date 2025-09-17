@@ -12,8 +12,8 @@ const ChatArea = ({ chat, onChatUpdate, onLeaveChat }) => {
   const [newMessage, setNewMessage] = useState('');
   const [selectedFile, setSelectedFile] = useState(null);
   const [showDetails, setShowDetails] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [showSettings, setShowSettings] = useState(false); 
+  const [isAdmin, setIsAdmin] = useState(false); // checks cur user's admin status
   const { user } = useAuth();
   const fileInputRef = useRef(null);
   const messagesEndRef = useRef(null);
@@ -51,13 +51,13 @@ const ChatArea = ({ chat, onChatUpdate, onLeaveChat }) => {
     try {
       const { data } = await fetchWithToken(`/chats/${chat._id}/messages`);
       if (data.success) {
-        let messageData = data.data?.messages || data.data || [];
+        let messageData = data.data?.messages || [];
         messageData = Array.isArray(messageData) ? messageData : [];
         
         const sortedMessages = messageData.sort((a, b) => {
           const dateA = new Date(a.createdAt);
           const dateB = new Date(b.createdAt);
-          return dateA - dateB;
+          return dateB - dateA;
         });
         
         setMessages((sortedMessages).reverse());
