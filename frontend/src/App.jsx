@@ -4,6 +4,7 @@ import { SocketProvider } from './contexts/SocketContext'; // Add this
 import AuthPage from './components/Auth/AuthPage';
 import MainChat from './components/Chat/MainChat';
 import { fetchWithToken } from './services/api';
+import toast from 'react-hot-toast';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -23,7 +24,8 @@ function App() {
         })
         if (result.status === 200) {
           setIsAuthenticated(true);
-          console.log("User verified")
+          const {username} = result.data.data
+          toast.success(`Welcome ${username}`)
         }
         else {
           setIsAuthenticated(false) // safety

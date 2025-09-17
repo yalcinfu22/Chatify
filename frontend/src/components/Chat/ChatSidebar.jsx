@@ -73,7 +73,7 @@ const ChatSidebar = ({ chats, selectedChat, onSelectChat, onRefresh, onJoinGroup
               <div className="chat-info">
                 <div className="chat-name">{chat.displayName}</div>
                 <div className="chat-type">
-                  {chat.isGroupChat ? 'Group' : 'Direct Chat'}
+                  {chat.isGroupChat ? `${chat.latestMessage.sender.name}: ${chat.latestMessage.content}` :  `${chat.latestMessage.content}`}
                 </div>
               </div>
             </div>

@@ -1,9 +1,13 @@
 import React, { useState } from 'react';
 import AuthForm from './AuthForm';
+import toast from 'react-hot-toast';
 
 const AuthPage = ({ onAuthSuccess }) => {
   const [isLogin, setIsLogin] = useState(true);
-
+  const handleRegSuccess = () => {
+    toast.success('Registration successful! Please login.');
+    setIsLogin(true);
+  }
   return (
     <div className="auth-page">
       <div className="auth-card">
@@ -26,10 +30,7 @@ const AuthPage = ({ onAuthSuccess }) => {
         
         <AuthForm 
           formType={isLogin ? 'login' : 'register'} 
-          onSuccess={isLogin ? onAuthSuccess : () => {
-            alert('Registration successful! Please login.');
-            setIsLogin(true);
-          }} 
+          onSuccess={isLogin ? onAuthSuccess : handleRegSuccess} 
         />
       </div>
     </div>
