@@ -1,16 +1,45 @@
 import React, { useState, useEffect } from 'react';
 import { fetchWithToken, API_BASE_URL } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
+import { useSocket } from '../../contexts/SocketContext';
 
 const ChatDetailsModal = ({ chat, onClose }) => {
   const { user } = useAuth();
   const [details, setDetails] = useState(null);
   const [loading, setLoading] = useState(true);
   const [copiedCode, setCopiedCode] = useState(false);
+  const {socket} = useSocket();
 
   useEffect(() => {
     fetchChatDetails();
   }, []);
+
+
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleStatusChange = (data) => {
+      // örneğin data = { userId, isOnline }
+      setDetails((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          members: prev.members.map(m =>
+            m._id === data.userId 
+              ? { ...m, isOnline: data.isOnline, lastSeen: data.lastSeen ?? m.lastSeen }
+              : m
+          )
+        };
+      });
+    };
+
+    socket.on("user-status-changed", handleStatusChange);
+
+    // cleanup (önemli!)
+    return () => {
+      socket.off("user-status-changed", handleStatusChange);
+    };
+  }, [socket]);
 
   const fetchChatDetails = async () => {
     try {

@@ -51,6 +51,10 @@ const userSchema = new mongoose.Schema({ // bir hizmet kullanıcısı tam adı, 
     type: Date,
     required: false
   },
+  lastSeen: {
+    type: Date,
+    required: false
+  }
 }, {timestamps: true}
 );
 

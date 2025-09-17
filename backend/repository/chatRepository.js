@@ -96,7 +96,7 @@ export default class ChatRepository {
             const chat = await Chat.findById(chatId)
                 .populate({
                     path: 'members',
-                    select: 'name surname isOnline profilePicture',
+                    select: 'name surname isOnline profilePicture updatedAt',
                     model: 'User',
                     populate: {
                         path: 'profilePicture',

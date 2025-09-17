@@ -21,18 +21,27 @@ export default class UserRepository {
 
         return user;
     }
+    
     async setUserStatus(userId, status) {
-        try {
-            return await User.findByIdAndUpdate(
-                userId, 
-                { isOnline: status }, 
-                { new: true }
-            );
-        } catch (error) {
-            console.log("Error in setUserOnline repository")
-            throw error
+      try {
+        const updateData = { isOnline: status };
+
+        // only set lastSeen when going offline
+        if (!status) {
+          updateData.lastSeen = new Date();
         }
+
+        return await User.findByIdAndUpdate(
+          userId,
+          updateData,
+          { new: true }
+        );
+      } catch (error) {
+        console.log("Error in setUserStatus repository", error);
+        throw error;
+      }
     }
+
     async saveUser(newUser) {
         const user = new User(newUser);
         const result = await user.save(); 
