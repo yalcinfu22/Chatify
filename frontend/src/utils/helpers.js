@@ -21,9 +21,9 @@ export const getContentType = (file, message) => {
     return 'hybrid';
   } else if (file) {
     const fileType = file.type;
+    if (fileType.includes('gif')) return 'gif'; // move this above
     if (fileType.startsWith('image/')) return 'image';
     if (fileType.startsWith('video/')) return 'video';
-    if (fileType.includes('gif')) return 'gif';
     return 'file';
   } else if (isOnlyEmoji(message)) {
     return 'emoji';

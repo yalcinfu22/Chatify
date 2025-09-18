@@ -177,7 +177,7 @@ export default class ChatRepository {
         })
         .populate({
             path: 'latestMessage', // Son mesajı alıyoruz
-            select: 'content sender createdAt',
+            select: 'content contentType sender createdAt',
             populate: { path: 'sender', select: 'name' }
         });
             return chats;
