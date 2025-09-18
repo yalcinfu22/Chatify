@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { fetchWithToken } from '../../services/api';
+import { useSocket } from '../../contexts/SocketContext';
 
 const JoinGroupModal = ({ onClose, onSuccess }) => {
   const [inviteCode, setInviteCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const {socket} = useSocket();
 
   const handleSubmit = async () => {
     if (!inviteCode.trim() || inviteCode.length !== 10) {
@@ -24,14 +26,10 @@ const JoinGroupModal = ({ onClose, onSuccess }) => {
 
       if (data.success) {
         // Pass the joined chat data with safe defaults
-        const chatData = {
-          _id: data.data?._id,
-          displayName: data.data?.displayName || data.data?.name || 'New Group',
-          isGroupChat: data.data?.isGroupChat !== false,
-          displayPicture: data.data?.displayPicture || data.data?.groupPicture,
-          ...data.data
-        };
-        onSuccess(chatData);
+        const chatDetails = data.data
+        socket.emit('user-join-group', chatDetails)
+        
+        onSuccess(chatDetails);
       } else {
         setError(data.errorMessage || 'Failed to join group');
       }

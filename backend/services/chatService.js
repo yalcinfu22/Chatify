@@ -220,18 +220,18 @@ export default class ChatService {
                 const chatObject = chat.toObject();
 
                 let displayName = '';
-                let displayPicture = null;
+                let groupPicture = null;
 
                 if (chatObject.isGroupChat) {
                     displayName = chatObject.name;
-                    displayPicture = chatObject.groupPicture?.url || null;
+                    groupPicture = chatObject.groupPicture?.url || null;
                 } else {
                     const otherUser = chatObject.members.find(
                         member => member._id.toString() !== userId.toString()
                     );
                     if (otherUser) {
                         displayName = `${otherUser.name} ${otherUser.surname}`;
-                        displayPicture = otherUser.profilePicture?.url || null;
+                        groupPicture = otherUser.profilePicture?.url || null;
                     } else {
                         displayName = 'Bilinmeyen Kullanıcı';
                     }
@@ -241,7 +241,7 @@ export default class ChatService {
                     _id: chatObject._id,
                     isGroupChat: chatObject.isGroupChat,
                     displayName,
-                    displayPicture,
+                    groupPicture,
                     latestMessage: chatObject.latestMessage
                 };
             });

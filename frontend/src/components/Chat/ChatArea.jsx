@@ -323,11 +323,11 @@ const ChatArea = ({ chat, onChatUpdate, onLeaveChat }) => {
       <div className="chat-header">
         <div 
           className="chat-avatar"
-          style={chat.displayPicture ? {
-            backgroundImage: `url(${API_BASE_URL}/${chat.displayPicture})`
+          style={chat.groupPicture ? {
+            backgroundImage: `url(${API_BASE_URL}/${chat.groupPicture})`
           } : {}}
         >
-          {!chat.displayPicture && firstLetter}
+          {!chat.groupPicture && firstLetter}
         </div>
         <div className="chat-header-info">
           <div className="chat-name">{chatDisplayName}</div>

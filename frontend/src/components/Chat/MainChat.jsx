@@ -2,12 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { fetchWithToken } from '../../services/api';
 import ChatSidebar from './ChatSidebar';
 import ChatArea from './ChatArea';
+import { useSocket } from '../../contexts/SocketContext';
 
 const MainChat = () => {
   const [chats, setChats] = useState([]);
   const [selectedChat, setSelectedChat] = useState(null);
   const [loading, setLoading] = useState(true);
-
+  const socket = useSocket();
+  
   const fetchChats = async () => {
     try {
       const { data } = await fetchWithToken('/chats');
@@ -23,6 +25,7 @@ const MainChat = () => {
   useEffect(() => {
     fetchChats();
   }, []);
+
 
   const handleChatUpdate = (chatId, newMessage) => {
     setChats(prev => { 

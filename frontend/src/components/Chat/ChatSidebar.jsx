@@ -64,11 +64,11 @@ const ChatSidebar = ({ chats, selectedChat, onSelectChat, onRefresh, onJoinGroup
             >
               <div 
                 className="chat-avatar"
-                style={chat.displayPicture ? {
-                  backgroundImage: `url(${API_BASE_URL}/${chat.displayPicture})`
+                style={chat.groupPicture ? {
+                  backgroundImage: `url(${API_BASE_URL}/${chat.groupPicture})`
                 } : {}}
               >
-                {!chat.displayPicture && chat.displayName[0].toUpperCase()}
+                {!chat.groupPicture && chat.displayName[0].toUpperCase()}
               </div>
               <div className="chat-info">
                 <div className="chat-name">{chat.displayName}</div>

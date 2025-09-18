@@ -66,8 +66,39 @@ export const initializeSocket = (httpServer) => {
 
         socket.on('send-message', (newMsgDetails) => {
             const { chat_id } = newMsgDetails
-            io.to(chat_id).emit('new-message', newMsgDetails)
+            io.to(chat_id.toString()).emit('new-message', newMsgDetails)
         })
+        
+        socket.on('user-create-group-chat', (chatDetails) => {
+            const { _id } = chatDetails;
+            if (_id) {
+                socket.join(_id.toString());
+            }
+        });
+
+        socket.on('user-create-direct-chat', (chatDetails) => {
+            const { _id } = chatDetails;
+            if (_id) {
+                socket.join(_id.toString());
+            }
+        });
+
+        // Change this from 'user-join-chat' to 'user-join-group'
+        socket.on('user-join-group', (chatDetails) => {
+            console.log('user-join-group event received:', chatDetails);
+            const { _id } = chatDetails;
+            if (_id) {
+                socket.join(_id.toString());
+                console.log(`User ${username} joined room ${_id} after joining group`);
+                
+                /* Notify other members that someone joined
+                socket.to(_id.toString()).emit('user-joined-group', {
+                    userId,
+                    username,
+                    chat_id,
+                });*/
+            }
+        });
 
         // --- Adım 3: Offline Durumunu Yönet ve Yayınla ---
         socket.on('disconnect', async () => {

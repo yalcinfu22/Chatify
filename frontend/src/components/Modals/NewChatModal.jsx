@@ -23,6 +23,8 @@ const NewChatModal = ({ onClose, onSuccess }) => {
       });
 
       if (data.success) {
+        const chatDetails = data.data
+        socket.emit('user-create-direct-chat', chatDetails)
         onSuccess();
       } else {
         setError(data.errorMessage || 'Failed to create chat');

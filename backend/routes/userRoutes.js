@@ -34,7 +34,7 @@ router.post( // FORM DATA WILL BE SENT
     check("password", "Password length must be between 6 and 100 characters").isLength({ min: 6, max: 100}),
     check("name", "Name is required").notEmpty().isString(),
     check("surname", "Surname is required").notEmpty().isString(),
-    check("phone", "Phone is required").notEmpty().isString(),
+    check("phone", "Phone is required").notEmpty().isString().isMobilePhone(),
     check("chats", "chats field must be empty").isEmpty(), // controller'da bu alanları görmezden gelsek de dolu gelirse reddediyoruz
     check("isOnline", "isOnline field must be empty").isEmpty(),
     check("isDeleted", "isDeleted field must be empty").isEmpty(),

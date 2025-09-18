@@ -1,11 +1,13 @@
-import React, { useState } from 'react';
+import React, { Children, useState } from 'react';
 import { API_BASE_URL } from '../../services/api';
+import { useSocket } from '../../contexts/SocketContext';
 
 const NewGroupModal = ({ onClose, onSuccess }) => {
   const [name, setName] = useState('');
   const [groupPicture, setGroupPicture] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const {socket} = useSocket();
 
   const handleSubmit = async () => {
     if (!name.trim()) {
@@ -30,7 +32,10 @@ const NewGroupModal = ({ onClose, onSuccess }) => {
       });
 
       const data = await response.json();
+
       if (data.success) {
+        const chatDetails = data.data
+        socket.emit('user-create-group-chat', chatDetails);
         onSuccess();
       } else {
         setError(data.errorMessage || 'Failed to create group');
