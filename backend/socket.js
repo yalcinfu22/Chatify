@@ -9,6 +9,7 @@ import UserRepository from './repository/userRepository.js';
 const userRepository = new UserRepository();
 
 import AuthorizationController from './controllers/authorizationController.js';
+import { cpuUsage } from 'process';
 const authorizationController = new AuthorizationController();
 
 const { success, error } = consola; // <-- 'error'u da alalım, loglama için lazım.
@@ -62,7 +63,12 @@ export const initializeSocket = (httpServer) => {
         } catch (err) {
             error({ message: `Error on connection logic for ${username}: ${err.message}` });
         }
-        
+
+        socket.on('send-message', (newMsgDetails) => {
+            const { chat_id } = newMsgDetails
+            io.to(chat_id).emit('new-message', newMsgDetails)
+        })
+
         // --- Adım 3: Offline Durumunu Yönet ve Yayınla ---
         socket.on('disconnect', async () => {
             // ... (Map'ten silme ve size === 0 kontrolü) ...

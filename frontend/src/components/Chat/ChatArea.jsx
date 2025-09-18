@@ -4,6 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { getContentType } from '../../utils/helpers';
 import ChatDetailsModal from '../Modals/ChatDetailsModal';
 import GroupSettingsModal from '../Modals/GroupSettingsModal';
+import { useSocket } from '../../contexts/SocketContext';
 import { toast } from 'react-hot-toast'; // will be used in the future
 
 const ChatArea = ({ chat, onChatUpdate, onLeaveChat }) => {
@@ -14,9 +15,11 @@ const ChatArea = ({ chat, onChatUpdate, onLeaveChat }) => {
   const [showDetails, setShowDetails] = useState(false);
   const [showSettings, setShowSettings] = useState(false); 
   const [isAdmin, setIsAdmin] = useState(false); // checks cur user's admin status
-  const { user } = useAuth();
   const fileInputRef = useRef(null);
   const messagesEndRef = useRef(null);
+  const { user } = useAuth();
+  const { socket } = useSocket();
+
   useEffect(() => {
     // Hem chat hem de user yüklendiğinde fonksiyonları çalıştır
     if (chat && user) {
@@ -26,6 +29,20 @@ const ChatArea = ({ chat, onChatUpdate, onLeaveChat }) => {
       }
     }
   }, [chat, user]);
+
+  useEffect(() => {
+    // Listen for 'new-message' events from the server
+    const handleNewMessage = (message) => {
+      setMessages(prev => [...prev, message]);
+    };
+
+    socket.on("new-message", handleNewMessage);
+
+    // Cleanup to avoid duplicate listeners
+    return () => {
+      socket.off("new-message", handleNewMessage);
+    };
+  }, []); // empty deps → run only once on mount
 
   useEffect(() => {
     scrollToBottom();
@@ -69,7 +86,8 @@ const ChatArea = ({ chat, onChatUpdate, onLeaveChat }) => {
     setLoading(false);
   };
 
-  const sendMessage = async () => {
+
+  const sendMessage = async () => { // send a form, take it back, emit to room, update messages
     if (!newMessage.trim() && !selectedFile) return;
 
     try {
@@ -94,20 +112,15 @@ const ChatArea = ({ chat, onChatUpdate, onLeaveChat }) => {
       });
 
       const data = await response.json();
-      
       if (data.success) {
-        const newMsg = {
+        const newMsgDetails = {
+          chat_id: chat._id,
           ...data.data,
-          attachment: data.data.attachment ? {
-            url: typeof data.data.attachment === 'string' 
-              ? data.data.attachment 
-              : data.data.attachment.url
-          } : null
         };
-        setMessages(prev => [...prev, newMsg]);
+
+        socket.emit('send-message', newMsgDetails)
         setNewMessage('');
         setSelectedFile(null);
-        onChatUpdate && onChatUpdate(chat._id, newMsg);
       }
     } catch (error) {
       console.error('Failed to send message:', error);
