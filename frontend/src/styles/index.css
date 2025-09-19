@@ -302,7 +302,11 @@ body {
   display: flex;
   flex-direction: column;
   height: 100vh;
-  background: #e5ddd5;
+  background: #e5ddd5; /* fallback */
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: scroll;
 }
 
 .chat-area-empty {

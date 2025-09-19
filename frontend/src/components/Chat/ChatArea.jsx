@@ -326,11 +326,17 @@ const ChatArea = ({ chat, onChatUpdate, onLeaveChat }) => {
     );
   }
 
+  const backgroundStyle = { // whatsapp-like bg
+    backgroundImage: `url(${API_BASE_URL}/chat-area-bg.png)`
+  };
+
   const chatDisplayName = chat.displayName || chat.name || 'Chat';
   const firstLetter = chatDisplayName[0]?.toUpperCase() || '?';
 
   return (
-    <div className="chat-area">
+    <div className="chat-area"
+      style={backgroundStyle}
+    >
       <div className="chat-header">
         <div 
           className="chat-avatar"
