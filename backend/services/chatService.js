@@ -24,21 +24,29 @@ import test from '../utils/test.js';
 
 export default class ChatService {
 
-    async createDirectChat(creatorId, recipientIdentifier) {
+    async createDirectChat(creatorId, recipientIdentifier) { // TODO: REVIEW STATUS CODES, MAKE CONTROLLER DUMBER
         // Hata durumunda geri alınacak kaynakları izlemek için değişkenler
+        const session = await mongoose.startSession();
+
         let newChat = null;
         try {
+
+            session.startTransaction();
+
             // 1. HEDEF KULLANICIYI BUL
-            const recipient = await userRepository.findByUsernameOrPhone(recipientIdentifier);
+            const recipient = await userRepository.findByUsernameOrPhone(recipientIdentifier, session);
             if (!recipient) {
+                await session.abortTransaction();
                 return { success: false, errorMessage: "Hedef kullanıcı bulunamadı." };
             }
             if (recipient._id.toString() === creatorId.toString()) {
+                await session.abortTransaction();
                 return { success: false, errorMessage: "Kendinizle sohbet başlatamazsınız." }
             }
             // 2. MEVCUT SOHBET KONTROLÜ
-            const existingChat = await chatRepository.findDirectChatBetweenUsers(creatorId, recipient._id);
+            const existingChat = await chatRepository.findDirectChatBetweenUsers(creatorId, recipient._id, session);
             if (existingChat) {
+                await session.abortTransaction();
                 return { 
                     success: false, 
                     errorMessage: 'Bu kullanıcı ile zaten bir sohbetiniz mevcut.',
@@ -50,32 +58,55 @@ export default class ChatService {
                 creator: creatorId,
                 members: [creatorId, recipient._id]
             };
-            newChat = await chatRepository.createNewChat(chatData);
+            newChat = await chatRepository.createNewChat(chatData, session); 
 
             // 5. OLUŞTURULAN SOHBETİ KULLANICILARA EKLE
-            await userRepository.addChatToUsers([creatorId, recipient._id], newChat._id);
+            await userRepository.addChatToUsers([creatorId, recipient._id], newChat._id, session);
             
+            const creator = await userRepository.findById(creatorId, session ); 
+
+            const systemMessageContent = `${creator.name} started a chat with ${recipient.name}`;
+            
+            // 4. MessageService'i mevcut transaction'a dahil et.
+            const messageResult = await messageService.sendMessage(
+                newChat._id, creatorId, null, systemMessageContent, 'system', session
+            );
+
+            if (!messageResult.success) {
+                // serviste bilinen bir sorun çıkmışsa işlemi iptal et
+                throw new Error(messageResult.errorMessage);
+            }
+
             // 6. BAŞARILI SONUÇ
             // Frontend'e hazır, dolu dolu bir veri yollamak için populate kullanalım.
             const populatedChat = await newChat.populate([
-                { path: 'members', select: 'name surname username profilePicture isOnline' },
+                { 
+                    path: 'members', 
+                    select: 'name surname username profilePicture isOnline',
+                    options: { session },
+                },
+
             ]);
+
+            await session.commitTransaction();
             
             return { success: true, data: populatedChat };
 
         } catch (error) {
-            // HATA YÖNETİMİ VE GERİ ALMA (ROLLBACK)
+            await session.abortTransaction();
+            // HATA YÖNETİMİ VE GERİ ALMA (ROLLBACK) 
             console.error("createDirectChat servisinde hata:", error);
-
-            // Beklenmedik bir hata durumunda, eğer sohbet veritabanında oluşturulduysa onu silelim.
-            if (newChat) {
-                await chatRepository.deleteChat(newChat._id);
-            }
-            
-            return { success: false, errorMessage: "Sohbet oluşturulurken beklenmedik bir hata oluştu." }
+            // NOT: Transaction sayesinde bu koda gerek kalmadı
+            // // Beklenmedik bir hata durumunda, eğer sohbet veritabanında oluşturulduysa onu silelim.
+            // if (newChat) {
+            //     await chatRepository.deleteChat(newChat._id);
+            // }
+            return { success: false, errorMessage: error.errorMessage || "Sunucuda beklenmedik bir hata oluştu" }
+        } finally { // FINALLY HER DURUMDA ÇALIŞIR!
+            session.endSession();
         }
     }
-    async createGroupChat(creatorId, name, file) {
+    async createGroupChat(creatorId, name, file) { // TODO: REVIEW STATUS CODES, MAKE CONTROLLER DUMBER
         // 1. Transaction'ın sahibi olarak session'ı başlat.
         const session = await mongoose.startSession();
 
@@ -102,10 +133,10 @@ export default class ChatService {
             
             // 3. Tüm repository çağrılarına session'ı pasla.
             const newGroup = await chatRepository.createNewChat(groupData, session);
-            await userRepository.addChatToUser(creatorId, newGroup._id, session);
+            await userRepository.addChatToUser(creatorId, newGroup._id, session); // null access safety
             const user = await userRepository.findById(creatorId, session );
             
-            const systemMessageContent = `${user.name} ${user.surname} created the group ${name}`;
+            const systemMessageContent = `${user.name} created the group ${name}`;
             
             // 4. MessageService'i mevcut transaction'a dahil et.
             const messageResult = await messageService.sendMessage(

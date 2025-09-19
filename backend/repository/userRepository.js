@@ -11,15 +11,19 @@ export default class UserRepository {
         const user = await User.findOne({phone: phone})
         return user
     }
-    async findByUsernameOrPhone(identifier) {
-        const user = await User.findOne({
-            $or: [
-                { username: identifier },
-                { phone: identifier }
-            ]
-        });
+    async findByUsernameOrPhone(identifier, session = null) {
+      const user = await User.findOne(
+        {
+          $or: [
+            { username: identifier },
+            { phone: identifier }
+          ],
+        },
+        null, // projection yok
+        { session } // options
+      );
 
-        return user;
+      return user;
     }
     async findById(userId, session = null) {
         try {
@@ -88,11 +92,12 @@ export default class UserRepository {
             throw new Error("Kullanıcının sohbetleri bulunurken bir hata oluştu.");
         }
     }
-    async addChatToUsers(userIds, chatId) {
+    async addChatToUsers(userIds, chatId, session = null) {
         try {
             await User.updateMany(
                 { _id: { $in: userIds } },
-                { $addToSet: { chats: chatId } }
+                { $addToSet: { chats: chatId } },
+                { session },
             );
         } catch (error) {
             // 1. Hatayı, hangi fonksiyonda oluştuğu bilgisiyle birlikte logla.

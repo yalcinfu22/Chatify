@@ -2,7 +2,7 @@
 import Chat from '../models/chatModel.js';
 
 export default class ChatRepository {
-    async findDirectChatBetweenUsers(userId1, userId2) {
+    async findDirectChatBetweenUsers(userId1, userId2, session = null) {
         // Bu sorgu, veritabanında şu koşulları sağlayan bir döküman arar:
         // 1. Bir grup sohbeti OLMAMALI (isGroupChat: false).
         // 2. 'members' dizisi, HEM userId1'i HEM DE userId2'yi İÇERMELİ ($all operatörü).
@@ -10,7 +10,10 @@ export default class ChatRepository {
             const chat = await Chat.findOne({
                 isGroupChat: false,
                 members: { $all: [userId1, userId2], $size: 2 }
-            });
+            },
+            null,
+            {session},
+        );
             return chat;
         } catch (error) {
             console.log("Error in findDirectChatBetweenUsers repository", error)

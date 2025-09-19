@@ -69,7 +69,7 @@ export default class MessageService {
                     path: 'profilePicture', 
                     select: 'url', 
                     model: 'Image',
-                    options: { session } // Nested populate için de session gerekli
+                    options: { session } //// Nested populate için de session gerekli
                 },
                 options: { session } // Session'ı populate'e aktar
             },
