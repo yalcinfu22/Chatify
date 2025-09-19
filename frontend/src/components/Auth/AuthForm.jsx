@@ -36,7 +36,7 @@ const AuthForm = ({ formType, onSuccess }) => {
       if (formType === 'register') {
         setFormData({ username: '', password: '', name: '', surname: '', phone: '', profilePicture: null });
       }
-      onSuccess && onSuccess();
+      onSuccess && onSuccess(true);
     } else {
       setError(result.error);
     }

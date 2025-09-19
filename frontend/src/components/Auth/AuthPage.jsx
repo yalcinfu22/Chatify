@@ -4,9 +4,9 @@ import toast from 'react-hot-toast';
 
 const AuthPage = ({ onAuthSuccess }) => {
   const [isLogin, setIsLogin] = useState(true);
-  const handleRegSuccess = () => {
+  const handleRegStatus = (status) => {
     toast.success('Registration successful! Please login.');
-    setIsLogin(true);
+    setIsLogin(status);
   }
   return (
     <div className="auth-page">
@@ -30,7 +30,7 @@ const AuthPage = ({ onAuthSuccess }) => {
         
         <AuthForm 
           formType={isLogin ? 'login' : 'register'} 
-          onSuccess={isLogin ? onAuthSuccess : handleRegSuccess} 
+          onSuccess={isLogin ? onAuthSuccess : handleRegStatus} 
         />
       </div>
     </div>

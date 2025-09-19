@@ -2,9 +2,6 @@
 import { Server } from 'socket.io';
 import consola from 'consola';
 
-// Bu dosyada doğrudan Mongoose modeli yerine Repository'leri kullanmak daha tutarlı.
-// import AuthorizationController from './controllers/authorizationController.js';
-// const authorizationController = new AuthorizationController();
 import UserRepository from './repository/userRepository.js';
 const userRepository = new UserRepository();
 
@@ -12,29 +9,49 @@ import AuthorizationController from './controllers/authorizationController.js';
 import { cpuUsage } from 'process';
 const authorizationController = new AuthorizationController();
 
-const { success, error } = consola; // <-- 'error'u da alalım, loglama için lazım.
+const { success, error } = consola;
 
-// Herkesin erişebilmesi için online kullanıcı sayacımızı burada tanımlıyoruz.
+// Single socket per user - stores userId -> socketId
 const onlineUsers = new Map(); 
 
+// Modified socket initialization with single session enforcement
 export const initializeSocket = (httpServer) => {
     const io = new Server(httpServer, { 
         cors: {
-            // DÜZELTME: http'den sonra iki nokta üst üste (://) gerekir.
             origin: ["http://localhost:5173", "http://localhost:3001"],
             methods: ["GET", "POST", "DELETE"],
             credentials: true,
         } 
     });
 
-    io.use(authorizationController.verifySocketToken); // socket.user kısmına userId, username ve phone gömer
+    io.use(authorizationController.verifySocketToken);
 
     io.on('connection', async (socket) => {
-        // Bu noktaya gelen her bağlantı doğrulanmıştır ve socket.user objesi doludur. 
         const { userId, username } = socket.user;
+        success({ message: `User ${username} attempting to connect: ${socket.id}` });
+
+        // SINGLE SESSION ENFORCEMENT
+        if (onlineUsers.has(userId)) {
+            const existingSocketId = onlineUsers.get(userId);
+            
+            const existingSocket = io.sockets.sockets.get(existingSocketId);
+            if (existingSocket) {
+                existingSocket.emit('session-replaced', {
+                    message: 'Your session has been replaced by a new login'
+                });
+                existingSocket.disconnect(true);
+                console.log(`Disconnected existing socket ${existingSocketId} for user ${username}`);
+            }
+            
+            // Clear the old entries
+            onlineUsers.delete(userId);
+            console.log(`Cleared existing session for user ${username}`);
+        }
+
+        // Now add the new socket
         success({ message: `User ${username} connected: ${socket.id}` });
 
-        // --- Adım 1: Kullanıcıyı Odalarına Ekle ---
+        // --- Rest of your existing connection logic ---
         try {
             socket.join(userId);
             const chatIds = await userRepository.findUserChatIds(userId);
@@ -43,93 +60,95 @@ export const initializeSocket = (httpServer) => {
             error({ message: `Error joining rooms for ${username}: ${err.message}` });
         }
 
-        // --- Adım 2: Online Durumunu Yönet ve Yayınla ---
+        // Online status management (simplified since only one socket per user)
         try {
-            if (!onlineUsers.has(userId)) {
-                onlineUsers.set(userId, new Set());
+            // Set user as online and add to map (store single socket ID)
+            onlineUsers.set(userId, socket.id);
+            await userRepository.setUserStatus(userId, true);
 
-                await userRepository.setUserStatus(userId, true);
-
-                const chatIds = await userRepository.findUserChatIds(userId);
-                chatIds.forEach(chatId => {
-                    socket.to(chatId.toString()).emit('user-status-changed', { 
-                        userId, 
-                        isOnline: true 
-                    });
+            const chatIds = await userRepository.findUserChatIds(userId);
+            chatIds.forEach(chatId => {
+                socket.to(chatId.toString()).emit('user-status-changed', { 
+                    userId, 
+                    isOnline: true 
                 });
-                console.log(`User ${username} is ONLINE. Notified relevant chat rooms.`);
-            }
-            onlineUsers.get(userId).add(socket.id);
+            });
+            console.log(`User ${username} is ONLINE with single session.`);
         } catch (err) {
             error({ message: `Error on connection logic for ${username}: ${err.message}` });
         }
 
-        socket.on('send-message', (newMsgDetails) => {
-            const { chat_id } = newMsgDetails
-            io.to(chat_id.toString()).emit('new-message', newMsgDetails)
-        })
-        
+        // Simplified event handlers (no need for multiple socket handling)
         socket.on('user-create-group-chat', (chatDetails) => {
             const { _id } = chatDetails;
             if (_id) {
                 socket.join(_id.toString());
+                console.log(`User ${username} joined group room ${_id}`);
             }
         });
 
         socket.on('user-create-direct-chat', (chatDetails) => {
-            const { _id } = chatDetails;
+            const { _id, members, creator } = chatDetails;
             if (_id) {
                 socket.join(_id.toString());
-            }
-        });
-
-        // Change this from 'user-join-chat' to 'user-join-group'
-        socket.on('user-join-group', (chatDetails) => {
-            console.log('user-join-group event received:', chatDetails);
-            const { _id } = chatDetails;
-            if (_id) {
-                socket.join(_id.toString());
-                console.log(`User ${username} joined room ${_id} after joining group`);
+                console.log(`Creator ${username} joined direct chat room ${_id}`);
                 
-                /* Notify other members that someone joined
-                socket.to(_id.toString()).emit('user-joined-group', {
-                    userId,
-                    username,
-                    chat_id,
-                });*/
-            }
-        });
-
-        // --- Adım 3: Offline Durumunu Yönet ve Yayınla ---
-        socket.on('disconnect', async () => {
-            // ... (Map'ten silme ve size === 0 kontrolü) ...
-            if (onlineUsers.has(userId)) {
-                onlineUsers.get(userId).delete(socket.id);
-
-                if (onlineUsers.get(userId).size === 0) {
-                    onlineUsers.delete(userId);
-                    // DÜZELTME: Repository'deki doğru metodu çağıralım.
-                    await userRepository.setUserStatus(userId, false);
+                const otherMember = members.find(member => member._id !== creator);
+                if (otherMember && onlineUsers.has(otherMember._id)) {
+                    // Get the other member's single socket ID
+                    const otherSocketId = onlineUsers.get(otherMember._id);
+                    const otherSocket = io.sockets.sockets.get(otherSocketId);
                     
-                    // tekrar fetchliyoruz çünkü user bazı gruplardan çıkmış olabilir
-                    const chatIds = await userRepository.findUserChatIds(userId);
-                    chatIds.forEach(chatId => {
-                        io.to(chatId.toString()).emit('user-status-changed', {
-                            userId,
-                            isOnline: false,
-                            lastSeen: new Date()
-                        });
-                    });
-                    console.log(`User ${username} is OFFLINE. Notified relevant chat rooms.`);
+                    if (otherSocket) {
+                        otherSocket.join(_id.toString());
+                        console.log(`Added ${otherMember.username} to direct chat room ${_id}`);
+                    }
                 }
             }
         });
+
+        socket.on('send-message', (newMsgDetails) => {
+            const { chat_id } = newMsgDetails;
+            io.to(chat_id.toString()).emit('new-message', newMsgDetails);
+        });
+
+        socket.on('user-join-group', (chatDetails) => {
+            const { _id } = chatDetails;
+            if (_id) {
+                socket.join(_id.toString());
+                console.log(`User ${username} joined group ${_id}`);
+                
+                socket.to(_id.toString()).emit('user-joined-group', {
+                    userId,
+                    username,
+                    chatId: _id,
+                    joinedAt: new Date()
+                });
+            }
+        });
+
+        socket.on('recover-session', () => {
+            
+        })
+        
+        // Simplified disconnect handler
+        socket.on('disconnect', async () => {
+            if (onlineUsers.has(userId)) {
+                onlineUsers.delete(userId);
+                await userRepository.setUserStatus(userId, false);
+                
+                const chatIds = await userRepository.findUserChatIds(userId);
+                chatIds.forEach(chatId => {
+                    io.to(chatId.toString()).emit('user-status-changed', {
+                        userId,
+                        isOnline: false,
+                    });
+                });
+                console.log(`User ${username} disconnected and went OFFLINE.`);
+            }
+        });
     });
 
-    success({
-        message: `WebSocket successfully initialized`,
-        badge: true,
-    });
-
+    success({message: `WebSocket initialized with single session policy`});
     return io;
 };

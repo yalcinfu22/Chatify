@@ -35,12 +35,16 @@ const ChatArea = ({ chat, onChatUpdate, onLeaveChat }) => {
     const handleNewMessage = (message) => {
       setMessages(prev => [...prev, message]);
     };
-
-    socket.on("new-message", handleNewMessage);
+    
+    if(socket) {
+      socket.on("new-message", handleNewMessage);
+    }
 
     // Cleanup to avoid duplicate listeners
     return () => {
-      socket.off("new-message", handleNewMessage);
+      if(socket) {
+        socket.off("new-message", handleNewMessage);
+      }
     };
   }, []); // empty deps → run only once on mount
 

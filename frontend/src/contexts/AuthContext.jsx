@@ -1,6 +1,6 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
-import { loginAPI, registerAPI } from '../services/api';
-
+import { loginAPI, registerAPI, fetchWithToken } from '../services/api';
+import toast from 'react-hot-toast';
 const AuthContext = createContext(null);
 
 export const useAuth = () => {
@@ -14,20 +14,47 @@ export const useAuth = () => {
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    const storedUser = localStorage.getItem('user');
-    
-    if (token && storedUser) {
-      try {
-        setUser(JSON.parse(storedUser));
-      } catch (error) {
-        console.error('Invalid user data');
-        logout();
+    const checkAuth = async () => {
+      const token = localStorage.getItem('token');
+      const storedUser = localStorage.getItem('user');
+      
+      if (!token || !storedUser) {
+        setLoading(false);
+        return;
       }
-    }
-    setLoading(false);
+      
+      try {
+        const result = await fetchWithToken('/users/verify', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'token': token
+          },
+        });
+        
+        if (result.status === 200) {
+          handleAuthStatus(true);
+          setUser(JSON.parse(storedUser));
+          const { username } = result.data.data;
+          toast.success(`Welcome back, ${username}!`);
+        } else {
+          handleAuthStatus(false);
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+        }
+      } catch (error) {
+        console.error("Verification error:", error);
+        handleAuthStatus(false);
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+      }
+      setLoading(false);
+    };
+    
+    checkAuth();
   }, []);
 
   const login = async (username, password) => {
@@ -36,6 +63,7 @@ export const AuthProvider = ({ children }) => {
       localStorage.setItem('token', result.data.token);
       localStorage.setItem('user', JSON.stringify(result.data.user));
       setUser(result.data.user);
+      handleAuthStatus(true);
     }
     return result;
   };
@@ -51,8 +79,12 @@ export const AuthProvider = ({ children }) => {
     window.location.reload();
   };
 
+  const handleAuthStatus = (status) => {
+    setIsAuthenticated(status);
+  };
+
   return (
-    <AuthContext.Provider value={{ user, login, register, logout, loading, isAuthenticated: !!user }}>
+    <AuthContext.Provider value={{ user, login, register, logout, handleAuthStatus, loading, isAuthenticated }}>
       {children}
     </AuthContext.Provider>
   );
