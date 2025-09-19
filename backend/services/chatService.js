@@ -76,56 +76,74 @@ export default class ChatService {
         }
     }
     async createGroupChat(creatorId, name, file) {
-        let newGroup = null;
-        let newImage = null;
-        // --- Adım 1: Grup ve Resim Varlıklarını Oluşturma ---
+        // 1. Transaction'ın sahibi olarak session'ı başlat.
+        const session = await mongoose.startSession();
+
         try {
+            // 2. Transaction'ı başlat.
+            session.startTransaction();
+
+            let newImage = null;
             if (file) {
-                const imageResult = await imageService.saveImage(file, creatorId);
-                if (!imageResult.success) {
-                    // imageService dosyayı zaten sildi, bizim bir şey yapmamıza gerek yok.
-                    // Sadece hatayı alıp Controller'a geri dönelim.
-                    throw imageResult.errorMessage
-                }
+                const imageResult = await imageService.saveImage(file, creatorId, session);
+                // saveImage hata fırlatacağı için bu kontrol yerine try-catch var.
                 newImage = imageResult.data;
             }
-            const inviteCode = generateInviteCode();
+
             const groupData = {
                 name,
                 isGroupChat: true,
                 creator: creatorId,
                 admins: [creatorId],
                 members: [creatorId],
-                inviteCode,
-                ...(newImage && { groupPicture: newImage._id }) // Resim varsa ekle
+                inviteCode: generateInviteCode(),
+                ...(newImage && { groupPicture: newImage._id })
             };
-            newGroup = await chatRepository.createNewChat(groupData);
-            await userRepository.addChatToUser(creatorId, newGroup._id)
+            
+            // 3. Tüm repository çağrılarına session'ı pasla.
+            const newGroup = await chatRepository.createNewChat(groupData, session);
+            await userRepository.addChatToUser(creatorId, newGroup._id, session);
+            const user = await userRepository.findById(creatorId, session );
+            
+            const systemMessageContent = `${user.name} ${user.surname} created the group ${name}`;
+            
+            // 4. MessageService'i mevcut transaction'a dahil et.
+            const messageResult = await messageService.sendMessage(
+                newGroup._id, creatorId, null, systemMessageContent, 'system', session
+            );
+
+            if (!messageResult.success) {
+                // messageService bir hata yakalarsa, onu fırlatarak tüm transaction'ı iptal et.
+                throw new Error(messageResult.errorMessage);
+            }
+
+            // 5. Her şey yolunda, tüm değişiklikleri onayla.
+            await session.commitTransaction();
+            
+            // Transaction bittikten sonra populate yapıp sonucu döndür.
+            const populatedGroup = await newGroup.populate([
+                { path: 'members', select: 'name surname username profilePicture' },
+            ]);
+            
+            // populatedGroup'a son mesajı da ekleyebiliriz.
+            populatedGroup.latestMessage = messageResult.data;
+
+            return { success: true, data: populatedGroup };
 
         } catch (error) {
-            // Bu catch bloğu, SADECE veritabanına yazarken oluşan beklenmedik hataları yakalar.
-            // (örn: DB bağlantısı koptu)
-            console.error("Varlık oluşturma sırasında kritik hata:", error);
-            // Eğer bu aşamada hata olduysa, yüklenen resim ve dosyayı temizlememiz gerekir.
-            if(file && fs.existsSync(file.path)) fs.unlinkSync(file.path);
-            if(newImage) await imageRepository.deleteImage(newImage._id);
-            return { success: false, errorMessage: "Grup oluşturulurken bir veritabanı hatası oluştu." };
-        }
-        // --- Adım 2: Oluşturulan Grubu Kullanıcıya Ekleme ---
-        try {
-            // Her şey başarılı. Sonucu populate edip gönderelim.
-            const populatedGroup = await newGroup.populate('members', 'name surname username profilePicture');
-            return { success: true, data: populatedGroup };
-        } catch (error) {
-            // Bu catch bloğu, kullanıcıya chat eklenirken bir sorun olursa çalışır.
-            // Bu, işlemin son aşamasında bir hata olduğu için TÜM işlemi geri almamız gerekir.
-            console.error("Kullanıcıya chat eklenirken kritik hata:", error);
-            // TAM GERİ ALMA (FULL ROLLBACK)
-            if (file && fs.existsSync(file.path)) fs.unlinkSync(file.path);
-            if (newImage) await imageRepository.deleteImage(newImage._id);
-            // Bu sefer newGroup kesinlikle var, onu da silmeliyiz.
-            await chatRepository.hardDeleteById(newGroup._id);
-            return { success: false, errorMessage: "Grup oluşturuldu ancak kullanıcıya eklenemedi. İşlem geri alındı." };
+            // 6. Herhangi bir adımda hata olursa, tüm işlemleri geri al.
+            console.error("createGroupChat servisinde kritik hata, transaction geri alınıyor:", error);
+            await session.abortTransaction();
+
+            // Veritabanı işlemleri geri alındı, sadece fiziksel dosyayı silmemiz yeterli.
+            if (file && fs.existsSync(file.path)) {
+                fs.unlinkSync(file.path);
+            }
+            
+            return { success: false, errorMessage: `Grup oluşturulamadı: ${error.message}` };
+        } finally {
+            // 7. Oturumu her durumda sonlandır.
+            session.endSession();
         }
     }
 

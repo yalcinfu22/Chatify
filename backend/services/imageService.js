@@ -4,36 +4,35 @@ import ImageRepository from '../repository/imageRepository.js';
 const imageRepository = new ImageRepository();
 
 export default class ImageService {
-    async saveImage(file, uploaderId) {
+    
+    async saveImage(file, uploaderId, session = null) {
         try {
-                // file.path şu an: 'C:\\Users\\...\\backend\\uploads\\chat-messages\\message_123.png'
-
-    // 1. Yolu "uploads" kelimesinden itibaren bölerek göreli (relative) kısmı al.
-    // path.split('uploads') -> ['C:\\Users\\...\\backend\\', '\\chat-messages\\message_123.png']
-    // [1] ile ikinci parçayı alırız.
-    const relativePathWithBackslashes = file.path.split('uploads')[1];
-
-    // 2. Windows'un ters taksimlerini (\) web uyumlu düz taksimlere (/) çevir.
-    const relativePathWithForwardSlashes = relativePathWithBackslashes.replace(/\\/g, '/');
-
-    // 3. Başına "uploads" kelimesini tekrar ekleyerek son URL'i oluştur.
-    // Sonuç: 'uploads/chat-messages/message_123.png'
-    const finalUrl = `uploads${relativePathWithForwardSlashes}`;
-
+            // Windows'un ters taksimlerini (\) web uyumlu düz taksimlere (/) çevir.
+            const relativePath = file.path.split('uploads')[1].replace(/\\/g, '/');
+            const finalUrl = `uploads${relativePath}`;
 
             const imageInfo = {
                 url: finalUrl,
                 uploader: uploaderId,
-                fileType: file.fileType // multer'da türü tespit ediyoruz
+                fileType: file.fileType  // BUG: not mimeType!
             };
-
-            const newImage = await imageRepository.saveImage(imageInfo);
+            
+            // Repository'e session'ı pasla. Zaten bu şekilde tasarlanmış.
+            const newImage = await imageRepository.saveImage(imageInfo, session);
             return { success: true, data: newImage };
 
         } catch (error) {
-            // Eğer DB'ye kaydederken hata olursa, diske yüklenmiş dosyayı sil.
-            fs.unlinkSync(file.path);
-            return { success: false, errorMessage: error }
+            // Eğer bu fonksiyon bir transaction'ın sahibi DEĞİLSE (yani session dışarıdan geldiyse)
+            // dosyayı silme, sadece hatayı yukarı fırlat ki transaction sahibi hatayı yakalasın.
+            if (session) {
+                throw error;
+            }
+
+            // Eğer bu fonksiyon transaction'ın sahibi ise (bağımsız çalışıyorsa), dosyayı sil.
+            if (file && fs.existsSync(file.path)) {
+                fs.unlinkSync(file.path);
+            }
+            return { success: false, errorMessage: error.message };
         }
     }
     async softDeleteById(imageId, userId, session = null) {

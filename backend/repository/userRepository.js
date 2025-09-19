@@ -21,6 +21,17 @@ export default class UserRepository {
 
         return user;
     }
+    async findById(userId, session = null) {
+        try {
+            // Mongoose'un findById metodu da session bilgisi alabilir.
+            // Projeksiyon (ikinci parametre) belirtmek istemiyorsak null geçeriz.
+            // Üçüncü parametre opsiyon objesidir ve session'ı buraya koyarız.
+            return await User.findById(userId, null, { session });
+        } catch (error) {
+            console.error("Error in findById repository:", error);
+            throw error;
+        }
+    }
     
     async setUserStatus(userId, status) {
       try {
@@ -47,12 +58,15 @@ export default class UserRepository {
         const result = await user.save(); 
         return result;
     }
-    async addChatToUser(userId, chatId) { // may return null or throw an interenal error (service must detect 404 "null case") 
+    async addChatToUser(userId, chatId, session = null) {
         try {
             const updatedUser = await User.findByIdAndUpdate(
                 userId,
                 { $addToSet: { chats: chatId } },
-                { new: true }
+                {
+                    new: true,
+                    session: session  // This works fine even if session is null
+                }
             );
             return updatedUser;
         } catch (error) {

@@ -15,102 +15,116 @@ import test from '../utils/test.js';
 import mongoose from 'mongoose'; // transcation için
 import fs from 'fs'; // multer rollback için
 import { isUserMemberOfChat } from '../helpers/permission.js';
+import { SYSTEM_USER_ID } from '../system.js';
 
 export default class MessageService {
 
-    async sendMessage(chatId, userId, file, content, contentType) {
-        // 1. Transaction için bir oturum (session) başlat.
-        const session = await mongoose.startSession();
-        try {
-            // 2. Transaction'ı başlat.
-            session.startTransaction();
-            
-            const chat = await chatRepository.findNonDeletedById(chatId, {session})
-            if(!chat) {
-                    await session.abortTransaction();
-                    session.endSession();
-                    return {
-                        success: false,
-                        statusCode: 404,
-                        errorMessage: "Chat not found",
-                    }
+    /**
+     * Mesaj gönderme işleminin ana mantığını içerir.
+     * Bu fonksiyon, bir transaction session'ı içinde çalıştırılmalıdır.
+     * @private
+     */
+    async #sendMessageLogic(chatId, userId, file, content, contentType, session) {
+        // 1. Göndericiyi belirle: Sistem mesajı mı, kullanıcı mesajı mı?
+        const senderId = (contentType === 'system') ? SYSTEM_USER_ID : userId;
+
+        if(contentType != 'system') {
+            const chat = await chatRepository.findNonDeletedById(chatId, { session });
+            if (!chat) {
+                throw { statusCode: 404, message: "Chat not found" };
             }
-
-            if(!isUserMemberOfChat(chat, userId)) {
-                await session.abortTransaction();
-                session.endSession();
-                return {
-                    success: false,
-                    statusCode: 403, // FORBIDDEN
-                    errorMessage: "User can not send a message to this chat"
-                }
+            if (!isUserMemberOfChat(chat, userId)) {
+                throw { statusCode: 403, message: "User cannot send a message to this chat" };
             }
-            let attachmentId = null;
-
-            // Adım A: Eğer dosya varsa, Image oluştur (transaction içinde)
-            if (file) {
-                const imageResult = await imageService.saveImage(file, userId, session); // session'ı delege et
-                if (!imageResult.success) {
-                    // Transaction'ı iptal edip hatayı dön.
-                    await session.abortTransaction();
-                    session.endSession();
-                    return { success: false, statusCode: 400, errorMessage: imageResult.errorMessage };
-                }
-                attachmentId = imageResult.data._id;
+        }
+        let attachmentId = null;
+        if (file) {
+            // imageService de transaction-aware olmalı ve session'ı kullanmalı
+            const imageResult = await imageService.saveImage(file, userId, session);
+            if (!imageResult.success) {
+                // Hata objesi fırlatarak transaction'ın genel catch bloğuna düşmesini sağla
+                throw { statusCode: 400, message: imageResult.errorMessage };
             }
-
-            // Adım B: Mesajı oluştur
-            const messageInfo = {
-                content,
-                contentType,
-                attachment: attachmentId,
-                sender: userId,
-                chat: chatId
-            };
-            const newMessage = await messageRepository.saveMessage(messageInfo, session);
-
-            // Adım C: Sohbeti güncelle
+            attachmentId = imageResult.data._id;
+        }
+    
+        const messageInfo = {
+            content,
+            contentType,
+            attachment: attachmentId,
+            sender: senderId,
+            chat: chatId
+        };
+        const newMessage = await messageRepository.saveMessage(messageInfo, session);
+        
+        if(chatId) {  // ilerde kırılmasın diye
             await chatRepository.updateChatLatest(chatId, newMessage._id, session);
-            
-            // Adım D: Her şey yolunda, tüm değişiklikleri onayla.
-            await session.commitTransaction();
-
-            // Commit'ten sonra populate yap // sessionsuz populate'ler sonra ypaılır
-            const populatedMessage = await newMessage.populate([
-              {
+        }
+        // Populate işlemini transaction içinde yap
+        const populatedMessage = await newMessage.populate([
+            {
                 path: 'sender',
-                select: 'name username profilePicture',
-                populate: { path: 'profilePicture', select: 'url', model: 'Image' }
-              },
-              { path: 'attachment', select: 'url', model: 'Image' }
-            ]);
-          
+                select: 'name username profilePicture', // I avoided adding isSystem find it vulnerable
+                populate: { 
+                    path: 'profilePicture', 
+                    select: 'url', 
+                    model: 'Image',
+                    options: { session } // Nested populate için de session gerekli
+                },
+                options: { session } // Session'ı populate'e aktar
+            },
+            { 
+                path: 'attachment', 
+                select: 'url', 
+                model: 'Image',
+                options: { session } // Session'ı populate'e aktar
+            }
+        ]);
+        
+        return populatedMessage; // Artık populate edilmiş mesajı döndür
+    }
+    
+    async sendMessage(chatId, userId, file, content, contentType, existingSession = null) {
+        // Eğer dışarıdan bir session verilmediyse, bu fonksiyon transaction'ın sahibidir.
+        const isTransactionOwner = !existingSession;
+        const session = isTransactionOwner ? await mongoose.startSession() : existingSession;
+        try {
+            if (isTransactionOwner) {
+                session.startTransaction();
+            }
+            
+            // Ana iş mantığını çağır - artık populate edilmiş mesaj döner
+            const populatedMessage = await this.#sendMessageLogic(chatId, userId, file, content, contentType, session);
+            
+            if (isTransactionOwner) {
+                await session.commitTransaction();
+            }
+        
             return {
-              success: true,
-              statusCode: 201,
-              message: "Mesaj başarıyla gönderildi.",
-              data: populatedMessage
+                success: true,
+                statusCode: 201,
+                message: "Mesaj başarıyla gönderildi.",
+                data: populatedMessage
             };
-
         } catch (error) {
-            // Adım F: BEKLENMEDİK BİR HATA OLURSA, TÜM İŞLEMLERİ GERİ AL.
-            console.error("sendMessage servisinde kritik hata, transaction geri alınıyor:", error);
-            await session.abortTransaction();
-
-            // Transaction DB'deki kayıtları geri aldığı için, bizim sadece
-            // diske kaydedilmiş "yetim" dosyayı silmemiz yeterli.
+            if (isTransactionOwner) {
+                await session.abortTransaction();
+            }
+            // Diske kaydedilmiş "yetim" dosyayı sil
             if (file && fs.existsSync(file.path)) {
                 fs.unlinkSync(file.path);
             }
-
+        
+            console.error("sendMessage servisinde hata:", error);
             return {
                 success: false,
-                statusCode: 500,
-                errorMessage: "Mesaj gönderilirken sunucuda beklenmedik bir hata oluştu."
+                statusCode: error.statusCode || 500,
+                errorMessage: error.message || "Mesaj gönderilirken sunucuda beklenmedik bir hata oluştu."
             };
         } finally {
-            // Adım G: Oturumu her durumda (başarı veya hata) sonlandır.
-            session.endSession();
+            if (isTransactionOwner) {
+                session.endSession();
+            }
         }
     }
 

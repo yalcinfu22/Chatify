@@ -237,17 +237,18 @@ export default class ChatRepository {
         return updatedChat;
     }    
 
-    async createNewChat(chatData) {
+    async createNewChat(chatData, session = null) {
         try {
-            // Gelen verilerle yeni bir Chat modeli instance'ı oluşturuyoruz.
             const newChat = new Chat(chatData);
             
-            // Bu instance'ı veritabanına kaydediyoruz ve kaydedilmiş halini geri döndürüyoruz.
-            return await newChat.save();
+            // .save() metodu, içinde session bulunan bir opsiyon objesi alabilir.
+            // Eğer session null ise, Mongoose bunu görmezden gelir ve normal bir save işlemi yapar.
+            // Eğer session dolu ise, bu save işlemi o transaction'a dahil edilir.
+            return await newChat.save({ session });
         } catch (error) {
-            // Veritabanı seviyesinde bir hata olursa (örn: bağlantı kopması, validasyon hatası),
-            // hatayı loglayıp bir üst katmana (Service) fırlatıyoruz.
             console.error("Error in createNewChat repository:", error);
+            // Hatayı bir üst katman olan Service'e fırlatıyoruz ki
+            // Service katmanı transaction'ı iptal edebilsin (abort).
             throw error;
         }
     }

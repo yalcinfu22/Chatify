@@ -3,12 +3,13 @@ import mongoose from "mongoose";
 const userSchema = new mongoose.Schema({ // bir hizmet kullanıcısı tam adı, erişim bilgileri, login bilgileri, rol başlık vs detaylar + CRUD
   username: {
     type: String,
-    required: true,
+    required: function() { return !this.isSystem; }, 
     unique: true, // indexed by username
+    sparse: true // NOT: unique index'in null değerleri görmezden gelmesini sağlar
   },
-  password: {
-    type: String,
-    required: true,
+  password: { 
+      type: String, 
+      required: function() { return !this.isSystem; } 
   },
   name: {
     type: String,
@@ -20,8 +21,9 @@ const userSchema = new mongoose.Schema({ // bir hizmet kullanıcısı tam adı, 
   },
   phone: {
     type: String,
-    required: true,
+    required: function() { return !this.isSystem; } ,
     unique: true, // indexed by phone
+    sparse: true // NOT: unique index'in null değerleri görmezden gelmesini sağlar
   },
   profilePicture: {
       type: mongoose.Schema.Types.ObjectId,
@@ -54,9 +56,15 @@ const userSchema = new mongoose.Schema({ // bir hizmet kullanıcısı tam adı, 
   lastSeen: {
     type: Date,
     required: false
-  }
+  },
+  isSystem: {
+      type: Boolean, 
+      required: false
+  },
 }, {timestamps: true}
 );
+
+userSchema.index({ isSystem: 1 }, { sparse: true }); // system objesini diğerlerinden ayırır isSystem ile anında buluruz! NO-SQL!
 
 const User = mongoose.model("User", userSchema); // create a collection of notes in the database return CMO (collection manager object)
 export default User; // use your collection manager elsewhere

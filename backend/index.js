@@ -8,6 +8,7 @@ import path from "path";
 import { initializeSocket } from "./socket.js";
 import { URL, PORT } from "./config/index.js"; // config => .env port ve db bilgilerine tek yerden erişmek için
 import { instrument } from '@socket.io/admin-ui';
+import { createSystemUser } from './system.js';
 
 import Auth from './utils/auth.js'
 const auth = new Auth();
@@ -40,6 +41,8 @@ const startApp = async () => {
       optionsSuccessStatus: 200,
     };
     
+    await createSystemUser();
+
     app.use(cors(corsOptions));
 
     app.use('/uploads', express.static(path.join(__dirname, 'uploads')));

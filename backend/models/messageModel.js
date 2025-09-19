@@ -8,7 +8,7 @@ const messageSchema = mongoose.Schema({
     // Bu mesajın tipi ne?
     contentType: {
         type: String,
-        enum: ['text', 'link', 'emoji', 'file', 'image', 'video', 'gif', 'hybrid'],
+        enum: ['text', 'link', 'emoji', 'file', 'image', 'video', 'gif', 'hybrid', 'system'],
         default: 'text'
     },
     // EĞER contentType 'image', 'video' vb. ise,
