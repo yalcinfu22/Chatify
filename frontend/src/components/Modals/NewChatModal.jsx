@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
+import React, { Children, useState } from 'react';
 import { fetchWithToken } from '../../services/api';
+import { useSocket } from '../../contexts/SocketContext';
 
 const NewChatModal = ({ onClose, onSuccess }) => {
   const [recipientIdentifier, setRecipientIdentifier] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const { socket } = useSocket();
 
   const handleSubmit = async () => {
     if (!recipientIdentifier.trim()) {
@@ -21,9 +23,8 @@ const NewChatModal = ({ onClose, onSuccess }) => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ recipientIdentifier }) // Changed from recipientSpecifier
       });
-
       if (data.success) {
-        const chatDetails = data.data
+        const chatDetails = data.data;
         socket.emit('user-create-direct-chat', chatDetails)
         onSuccess();
       } else {

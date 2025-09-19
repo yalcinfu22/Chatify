@@ -88,6 +88,7 @@ export const initializeSocket = (httpServer) => {
         });
 
         socket.on('user-create-direct-chat', (chatDetails) => {
+            console.log("cool")
             const { _id, members, creator } = chatDetails;
             if (_id) {
                 socket.join(_id.toString());
@@ -128,7 +129,7 @@ export const initializeSocket = (httpServer) => {
         });
 
         socket.on('recover-session', () => {
-            
+
         })
         
         // Simplified disconnect handler
@@ -149,6 +150,9 @@ export const initializeSocket = (httpServer) => {
         });
     });
 
-    success({message: `WebSocket initialized with single session policy`});
+    success({
+        message: `WebSocket initialized`,
+        badge: true,
+    });
     return io;
 };
