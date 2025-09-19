@@ -32,13 +32,13 @@ const ChatArea = ({ chat, onChatUpdate, onLeaveChat }) => {
 
   useEffect(() => {
     // Listen for 'new-message' events from the server
-    const handleNewMessage = (message) => {
+    const handleNewMessage = (msgDetails) => {
       if(!chat) {
         console.log("no chat selected");
         return;
       }
-      if(chat._id === message.chat_id) {
-        console.log("ids matched")
+      if(chat._id === msgDetails.chat_id) {
+        const { chat_id, ...message} = msgDetails;
         setMessages(prev => [...prev, message]);
       }
     };
@@ -379,11 +379,42 @@ const ChatArea = ({ chat, onChatUpdate, onLeaveChat }) => {
           <div className="no-messages">No messages yet. Start the conversation!</div>
         ) : (
           messages.map((msg) => {
-            const isMyMessage = msg.sender?._id === user?.id;
-            const senderName = msg.sender?._id === user?.id 
+            const isMyMessage = msg.sender?._id === user?._id;
+            const senderName = msg.sender?._id === user?._id 
               ? 'You' 
               : msg.sender?.name || 'Unknown';
 
+            // Handle system messages
+            if (msg.contentType === 'system') {
+              return (
+                <div
+                  key={msg._id}
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'center',
+                    margin: '16px 0',
+                    width: '100%'
+                  }}
+                >
+                  <div
+                    style={{
+                      background: 'rgba(225, 245, 254, 0.92)',
+                      color: '#667781',
+                      padding: '6px 12px',
+                      borderRadius: '7px',
+                      fontSize: '13px',
+                      maxWidth: '85%',
+                      textAlign: 'center',
+                      boxShadow: '0 1px 0.5px rgba(0, 0, 0, 0.13)'
+                    }}
+                  >
+                    {msg.content}
+                  </div>
+                </div>
+              );
+            }
+
+            // Regular messages
             return (
               <div
                 key={msg._id}
@@ -411,7 +442,7 @@ const ChatArea = ({ chat, onChatUpdate, onLeaveChat }) => {
                     }
                   }}
                 >
-                  {!isMyMessage && chat.isGroupChat && (
+                  {!isMyMessage && chat.isGroupChat && msg.contentType !== 'system' && (
                     <div style={{ fontSize: '11px', color: '#25D366', marginBottom: '4px', fontWeight: 'bold' }}>
                       {senderName}
                     </div>
