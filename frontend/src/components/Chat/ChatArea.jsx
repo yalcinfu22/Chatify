@@ -33,7 +33,14 @@ const ChatArea = ({ chat, onChatUpdate, onLeaveChat }) => {
   useEffect(() => {
     // Listen for 'new-message' events from the server
     const handleNewMessage = (message) => {
-      setMessages(prev => [...prev, message]);
+      if(!chat) {
+        console.log("no chat selected");
+        return;
+      }
+      if(chat._id === message.chat_id) {
+        console.log("ids matched")
+        setMessages(prev => [...prev, message]);
+      }
     };
     
     if(socket) {
@@ -46,7 +53,7 @@ const ChatArea = ({ chat, onChatUpdate, onLeaveChat }) => {
         socket.off("new-message", handleNewMessage);
       }
     };
-  }, []); // empty deps → run only once on mount
+  }, [chat]); 
 
   useEffect(() => {
     scrollToBottom();
@@ -377,16 +384,6 @@ const ChatArea = ({ chat, onChatUpdate, onLeaveChat }) => {
               ? 'You' 
               : msg.sender?.name || 'Unknown';
 
-          if (msg.content) { // Sadece içeriği olan mesajları loglayalım
-            console.group(`Mesaj Analizi: "${msg.content}"`);
-            console.log("Gelen Mesaj Obj:", msg);
-            console.log("Mevcut Kullanıcı Obj:", user);
-            console.log("------ Karşılaştırma ------");
-            console.log("msg.sender.id ->", msg.sender?._id, `(Tipi: ${typeof msg.sender?._id})`);
-            console.log("user.id ->", user?.id, `(Tipi: ${typeof user?.id})`);
-            console.log("Sonuç (isMyMessage):", isMyMessage);
-            console.groupEnd();
-          }
             return (
               <div
                 key={msg._id}

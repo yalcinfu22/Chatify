@@ -88,7 +88,6 @@ export const initializeSocket = (httpServer) => {
         });
 
         socket.on('user-create-direct-chat', (chatDetails) => {
-            console.log("cool")
             const { _id, members, creator } = chatDetails;
             if (_id) {
                 socket.join(_id.toString());
