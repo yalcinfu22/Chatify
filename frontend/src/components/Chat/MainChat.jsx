@@ -8,6 +8,7 @@ import { API_BASE_URL } from '../../services/api';
 
 const notificationSound = new Audio(`${API_BASE_URL}/sounds/message-notification.mp3`);
 const sendMessageSound = new Audio(`${API_BASE_URL}/sounds/send-message.mp3`);
+const receiveMessageSound = new Audio(`${API_BASE_URL}/sounds/receive-message.mp3`);
 
 const MainChat = () => {
   const [chats, setChats] = useState([]);
@@ -39,11 +40,15 @@ const MainChat = () => {
 
   const handleChatUpdate = (chatId, senderId, newMessage, chatUpdatedAt) => {
     
-    // Your sound logic
-    if(user.id !== senderId) {
+    if(selectedChatRef.current?._id === chatId) {
+      // Your sound logic
+      if(user.id !== senderId) {
+        receiveMessageSound.play().catch(err => console.log('Notification sound failed:', err));
+      } else {
+        sendMessageSound.play().catch(err => console.log('Send message sound failed:', err));
+      }
+    } else if(!selectedChatRef.current) {
       notificationSound.play().catch(err => console.log('Notification sound failed:', err));
-    } else {
-      sendMessageSound.play().catch(err => console.log('Send message sound failed:', err));
     }
 
     // Animation logic - sadece başkasının mesajında VE seçili chat değilse
@@ -83,7 +88,7 @@ const MainChat = () => {
     if(socket) {
       socket.on("new-message", handleNavbarUpdate);
     }
-  }, [socket]);
+  }, [socket, user]);
 
   const handleLeaveChat = (chatId) => {
     setChats(prev => prev.filter(chat => chat._id !== chatId));
