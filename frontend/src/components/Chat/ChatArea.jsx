@@ -385,8 +385,8 @@ const ChatArea = ({ chat, onChatUpdate, onLeaveChat }) => {
           <div className="no-messages">No messages yet. Start the conversation!</div>
         ) : (
           messages.map((msg) => {
-            const isMyMessage = msg.sender?._id === user?._id;
-            const senderName = msg.sender?._id === user?._id 
+            const isMyMessage = msg.sender?._id === user?.id;
+            const senderName = msg.sender?._id === user?.id 
               ? 'You' 
               : msg.sender?.name || 'Unknown';
 
