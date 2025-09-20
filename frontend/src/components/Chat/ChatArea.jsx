@@ -6,6 +6,7 @@ import ChatDetailsModal from '../Modals/ChatDetailsModal';
 import GroupSettingsModal from '../Modals/GroupSettingsModal';
 import { useSocket } from '../../contexts/SocketContext';
 import { toast } from 'react-hot-toast'; // will be used in the future
+import EmojiPicker from 'emoji-picker-react';
 
 const ChatArea = ({ chat, onChatUpdate, onLeaveChat }) => {
   const [messages, setMessages] = useState([]);
@@ -15,8 +16,13 @@ const ChatArea = ({ chat, onChatUpdate, onLeaveChat }) => {
   const [showDetails, setShowDetails] = useState(false);
   const [showSettings, setShowSettings] = useState(false); 
   const [isAdmin, setIsAdmin] = useState(false); // checks cur user's admin status
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [cursorPosition, setCursorPosition] = useState(null);
+
+  const messageInputRef = useRef(null);
   const fileInputRef = useRef(null);
   const messagesEndRef = useRef(null);
+
   const { user } = useAuth();
   const { socket } = useSocket();
 
@@ -29,6 +35,42 @@ const ChatArea = ({ chat, onChatUpdate, onLeaveChat }) => {
       }
     }
   }, [chat, user]);
+
+  const onEmojiClick = (emojiObject) => {
+    const emoji = emojiObject.emoji;
+    const input = messageInputRef.current;
+    
+    if (input) {
+      const start = input.selectionStart;
+      const end = input.selectionEnd;
+      const text = newMessage;
+      
+      // Insert emoji at cursor position
+      const newText = text.substring(0, start) + emoji + text.substring(end);
+      setNewMessage(newText);
+      
+      // Set cursor position after emoji
+      setTimeout(() => {
+        input.selectionStart = input.selectionEnd = start + emoji.length;
+        input.focus();
+      }, 10);
+    } else {
+      // If no cursor position, append to end
+      setNewMessage(prevMessage => prevMessage + emoji);
+    }
+  };
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (showEmojiPicker && !event.target.closest('.emoji-picker-container')) {
+        setShowEmojiPicker(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showEmojiPicker]);
+  
 
   useEffect(() => {
     // Listen for 'new-message' events from the server
@@ -474,7 +516,33 @@ const ChatArea = ({ chat, onChatUpdate, onLeaveChat }) => {
         </div>
       )}
 
-      <div className="message-input-container">
+      <div className="message-input-container" style={{ position: 'relative' }}>
+        {/* Emoji Picker */}
+        {showEmojiPicker && (
+          <div 
+            className="emoji-picker-container"
+            style={{
+              position: 'absolute',
+              bottom: '60px',
+              left: '10px',
+              zIndex: 1000
+            }}
+          >
+            <EmojiPicker
+              onEmojiClick={onEmojiClick}
+              autoFocusSearch={false}
+              theme="light"
+              height={350}
+              width={300}
+              emojiStyle="native"
+              skinTonesDisabled
+              previewConfig={{
+                showPreview: false
+              }}
+            />
+          </div>
+        )}
+
         <input
           ref={fileInputRef}
           type="file"
@@ -482,18 +550,57 @@ const ChatArea = ({ chat, onChatUpdate, onLeaveChat }) => {
           onChange={(e) => setSelectedFile(e.target.files[0])}
           style={{ display: 'none' }}
         />
-        <button onClick={() => fileInputRef.current?.click()} className="attach-btn">
+        
+        <button 
+          onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+          className="emoji-btn"
+          style={{
+            padding: '8px',
+            background: 'transparent',
+            border: 'none',
+            fontSize: '24px',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}
+          type="button"
+        >
+          😊
+        </button>
+
+        <button 
+          onClick={() => fileInputRef.current?.click()} 
+          className="attach-btn"
+          type="button"
+        >
           📎
         </button>
+
         <input
+          ref={messageInputRef}
           type="text"
           placeholder="Type a message"
           value={newMessage}
           onChange={(e) => setNewMessage(e.target.value)}
-          onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
+          onKeyPress={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              sendMessage();
+            }
+          }}
+          onFocus={() => setCursorPosition(messageInputRef.current?.selectionStart)}
+          onClick={() => setCursorPosition(messageInputRef.current?.selectionStart)}
+          onKeyUp={() => setCursorPosition(messageInputRef.current?.selectionStart)}
           className="message-input"
+          style={{ flex: 1 }}
         />
-        <button onClick={sendMessage} className="send-button">
+
+        <button 
+          onClick={sendMessage} 
+          className="send-button"
+          type="button"
+        >
           Send
         </button>
       </div>
