@@ -291,7 +291,8 @@ export default class ChatService {
                     isGroupChat: chatObject.isGroupChat,
                     displayName,
                     groupPicture,
-                    latestMessage: chatObject.latestMessage
+                    latestMessage: chatObject.latestMessage,
+                    updatedAt: chatObject.updatedAt,
                 };
             });
 

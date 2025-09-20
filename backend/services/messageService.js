@@ -27,6 +27,7 @@ export default class MessageService {
     async #sendMessageLogic(chatId, userId, file, content, contentType, session) {
         // 1. Göndericiyi belirle: Sistem mesajı mı, kullanıcı mesajı mı?
         const senderId = (contentType === 'system') ? SYSTEM_USER_ID : userId;
+        let updatedChat = null
 
         if(contentType != 'system') {
             const chat = await chatRepository.findNonDeletedById(chatId, { session });
@@ -57,9 +58,10 @@ export default class MessageService {
         };
         const newMessage = await messageRepository.saveMessage(messageInfo, session);
         
-        if(chatId) {  // ilerde kırılmasın diye
-            await chatRepository.updateChatLatest(chatId, newMessage._id, session);
+        if(chatId && newMessage) {  // ilerde kırılmasın diye
+            updatedChat = await chatRepository.updateChatLatest(chatId, newMessage._id, session);
         }
+  
         // Populate işlemini transaction içinde yap
         const populatedMessage = await newMessage.populate([
             {
@@ -80,8 +82,15 @@ export default class MessageService {
                 options: { session } // Session'ı populate'e aktar
             }
         ]);
-        
-        return populatedMessage; // Artık populate edilmiş mesajı döndür
+
+        // Mongoose, beklenmeyen alanların client'a gönderilmesini engeller.
+        // Bu yüzden Mongoose dökümanını düz JS objesine çevirip sonra chatUpdatedAt ekledik
+        // Bu sayede frontend, chat listesini tekrar fetch etmeden anlık güncelleyebilecek
+        const responseMessage = {
+            ...populatedMessage.toObject(),
+            chatUpdatedAt: updatedChat ? updatedChat.updatedAt : undefined
+        };
+        return responseMessage;
     }
     
     async sendMessage(chatId, userId, file, content, contentType, existingSession = null) {
