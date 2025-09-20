@@ -239,7 +239,9 @@ body {
 .chat-list {
   flex: 1;
   overflow-y: auto;
+  transition: all 0.2s ease-out; /* Animasyon eklendi */
 }
+
 
 .empty-state {
   padding: 20px;
@@ -254,11 +256,19 @@ body {
   display: flex;
   align-items: center;
   gap: 12px;
-  transition: background 0.3s;
+  /* Transition genişletildi - mevcut background transition'ı korundu */
+  transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+  transform: translateY(0);
+  opacity: 1;
 }
 
 .chat-item:hover {
   background: #f5f5f5;
+  transform: translateX(2px); /* Hafif sağa kayma animasyonu eklendi */
+}
+
+.chat-item.new-message {
+  animation: chatHighlight 0.6s ease-out;
 }
 
 .chat-item.selected {
@@ -295,6 +305,37 @@ body {
   font-size: 12px;
   color: #999;
 }
+
+
+
+/* ==================== Keyframe Animasyonları ==================== */
+
+@keyframes chatHighlight {
+  0% {
+    background-color: rgba(37, 211, 102, 0.1);
+    transform: scale(1);
+  }
+  30% {
+    background-color: rgba(37, 211, 102, 0.2);
+    transform: scale(1.02);
+  }
+  100% {
+    background-color: transparent;
+    transform: scale(1);
+  }
+}
+
+@keyframes moveToTop {
+  0% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
 
 /* ==================== Chat Area ==================== */
 .chat-area {

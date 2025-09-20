@@ -5,7 +5,14 @@ import NewChatModal from '../Modals/NewChatModal';
 import NewGroupModal from '../Modals/NewGroupModal';
 import JoinGroupModal from '../Modals/JoinGroupModal';
 
-const ChatSidebar = ({ chats, selectedChat, onSelectChat, onRefresh, onJoinGroup }) => {
+const ChatSidebar = ({ 
+  chats, 
+  selectedChat, 
+  onSelectChat, 
+  onRefresh, 
+  onJoinGroup,
+  highlightChatId   // Bu props'u ekleyin
+}) => {
   const { user, logout } = useAuth();
   const [showNewChatModal, setShowNewChatModal] = useState(false);
   const [showNewGroupModal, setShowNewGroupModal] = useState(false);
@@ -60,7 +67,10 @@ const ChatSidebar = ({ chats, selectedChat, onSelectChat, onRefresh, onJoinGroup
             <div
               key={chat._id}
               onClick={() => onSelectChat(chat)}
-              className={`chat-item ${selectedChat?._id === chat._id ? 'selected' : ''}`}
+              className={`chat-item 
+                ${selectedChat?._id === chat._id ? 'selected' : ''}
+                ${highlightChatId === chat._id ? 'new-message' : ''}
+              `}
             >
               <div 
                 className="chat-avatar"
@@ -85,7 +95,7 @@ const ChatSidebar = ({ chats, selectedChat, onSelectChat, onRefresh, onJoinGroup
         )}
       </div>
 
-      {/* Modals */}
+      {/* Modals - aynı kalacak */}
       {showNewChatModal && (
         <NewChatModal
           onClose={() => setShowNewChatModal(false)}
@@ -118,4 +128,5 @@ const ChatSidebar = ({ chats, selectedChat, onSelectChat, onRefresh, onJoinGroup
     </div>
   );
 };
+
 export default ChatSidebar;
