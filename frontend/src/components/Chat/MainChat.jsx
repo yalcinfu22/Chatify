@@ -3,13 +3,19 @@ import { fetchWithToken } from '../../services/api';
 import ChatSidebar from './ChatSidebar';
 import ChatArea from './ChatArea';
 import { useSocket } from '../../contexts/SocketContext';
+import { useAuth } from '../../contexts/AuthContext';
+import { API_BASE_URL } from '../../services/api';
+
+const notificationSound = new Audio(`${API_BASE_URL}/sounds/message-notification.mp3`);
+const sendMessageSound = new Audio(`${API_BASE_URL}/sounds/send-message.mp3`);
 
 const MainChat = () => {
   const [chats, setChats] = useState([]);
   const [selectedChat, setSelectedChat] = useState(null);
   const [loading, setLoading] = useState(true);
   const { socket } = useSocket();
-  
+  const { user } = useAuth();
+
   const fetchChats = async () => {
     try {
       const { data } = await fetchWithToken('/chats');
@@ -26,7 +32,13 @@ const MainChat = () => {
     fetchChats();
   }, []);
 
-  const handleChatUpdate = (chatId, newMessage, chatUpdatedAt) => {
+  const handleChatUpdate = (chatId, senderId, newMessage, chatUpdatedAt) => {
+    console.log(`${chatId}  ${senderId}`)
+    if(user.id !== senderId) {
+      notificationSound.play().catch(err => console.log('Ses çalınamadı:', err)); // message-notification sound
+    } else {
+      sendMessageSound.play().catch(err => console.log('Ses çalınamadı:', err)); // send-message sound
+    }
     setChats(prev => {
       const updatedChat = prev.find(chat => chat._id === chatId);
       if (!updatedChat) return prev;
@@ -45,10 +57,10 @@ const MainChat = () => {
   useEffect(() => {
     const handleNavbarUpdate = (msgDetails) => {
       // Mesaj detaylarını ayrıştır
-      const { chat_id, chatUpdatedAt, ...newMessage } = msgDetails;
-
+      const { chat_id, sender, chatUpdatedAt, ...rest } = msgDetails;
+      const newMessage = { sender, ...rest }; // include sender explicitly
       // Chat listesini güncelle (her durumda)
-      handleChatUpdate(chat_id, newMessage, chatUpdatedAt);
+      handleChatUpdate(chat_id, sender._id, newMessage, chatUpdatedAt);
     };
     if(socket) {
       socket.on("new-message", handleNavbarUpdate);
