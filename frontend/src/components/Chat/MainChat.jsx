@@ -9,6 +9,7 @@ import { API_BASE_URL } from '../../services/api';
 const notificationSound = new Audio(`${API_BASE_URL}/sounds/message-notification.mp3`);
 const sendMessageSound = new Audio(`${API_BASE_URL}/sounds/send-message.mp3`);
 const receiveMessageSound = new Audio(`${API_BASE_URL}/sounds/receive-message.mp3`);
+const addedToNewChat = new Audio(`${API_BASE_URL}/sounds/added-to-new-chat.mp3`);
 
 const MainChat = () => {
   const [chats, setChats] = useState([]);
@@ -91,14 +92,22 @@ const MainChat = () => {
   }, [socket, user]);
 
   useEffect(() => {
-    const handleNewDirectChat = (chatDetails) => {
+    if (!socket) return;
 
+    const handleNewDirectChat = (newDirectChat) => {
+      addedToNewChat
+        .play()
+        .catch(err => console.log('Sound failed:', err));
+
+      setChats(prev => [newDirectChat, ...prev]);
     };
 
-    if(socket) {
-      socket.on("user-added-to-direct-chat", handleNewDirectChat);
-    }
-  }, [socket, user]);
+    socket.on("user-added-to-direct-chat", handleNewDirectChat);
+
+    return () => {
+      socket.off("user-added-to-direct-chat", handleNewDirectChat);
+    };
+  }, [socket]);
 
 
   const handleLeaveChat = (chatId) => {
@@ -126,8 +135,8 @@ const MainChat = () => {
         chats={chats}
         selectedChat={selectedChat}
         onSelectChat={setSelectedChat}
-        onRefresh={fetchChats}
         onJoinGroup={handleJoinGroup}
+        onRefresh={fetchChats}
         highlightChatId={highlightChatId}  // Animation props
       />
       <ChatArea

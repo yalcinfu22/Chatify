@@ -9,8 +9,8 @@ const ChatSidebar = ({
   chats, 
   selectedChat, 
   onSelectChat, 
-  onRefresh, 
   onJoinGroup,
+  onRefresh,
   highlightChatId   // Bu props'u ekleyin
 }) => {
   const { user, logout } = useAuth();
@@ -95,13 +95,11 @@ const ChatSidebar = ({
         )}
       </div>
 
-      {/* Modals - aynı kalacak */}
       {showNewChatModal && (
         <NewChatModal
           onClose={() => setShowNewChatModal(false)}
           onSuccess={() => {
             setShowNewChatModal(false);
-            onRefresh();
           }}
         />
       )}
@@ -111,7 +109,7 @@ const ChatSidebar = ({
           onClose={() => setShowNewGroupModal(false)}
           onSuccess={() => {
             setShowNewGroupModal(false);
-            onRefresh();
+            onRefresh(); // for now this will work todo: users can create groups with users at start
           }}
         />
       )}

@@ -89,7 +89,7 @@ export const initializeSocket = (httpServer) => {
             }
         });
 
-        socket.on('user-create-direct-chat', async (chatDetails) => {
+        socket.on('user-create-direct-chat', async (chatDetails) => { // event calls db, async ops in socket
             try {
               const { _id, members, creator } = chatDetails;
             
@@ -100,7 +100,11 @@ export const initializeSocket = (httpServer) => {
           
               socket.join(_id.toString());
               const otherMember = members.find(m => m._id !== creator);
-              const currentUserViewChat = await chatService.getDirectChatForUser(creator, otherMember._id);
+              let result = await chatService.getDirectChatForUser(creator, otherMember._id);
+              if(!result.success) {
+                throw new Error(result.errorMessage)
+              }
+              const currentUserViewChat = result.data;
               if(otherMember) {
                 // Fetch from DB for creator
                 if (onlineUsers.has(otherMember._id)) {
@@ -111,15 +115,17 @@ export const initializeSocket = (httpServer) => {
                     otherSocket.join(_id.toString());
                     console.log(`Added ${otherMember.username} to direct chat room ${_id}`);
                     // Fetch from DB for other member
-                    const otherUserViewChat = await chatService.getDirectChatForUser(otherMember._id, creator);
-                    console.log(otherUserViewChat)
+                    result = await chatService.getDirectChatForUser(otherMember._id, creator);
+                    if(!result.success) {
+                        throw new Error(result.errorMessage)
+                    }
+                    const otherUserViewChat = result.data;
                     io.to(otherSocketId).emit('user-added-to-direct-chat', otherUserViewChat);
                   }
                 }
               }
               // Emit back to creator
-              console.log(currentUserViewChat)
-              socket.emit('direct-chat-created', currentUserViewChat);
+              socket.emit('user-added-to-direct-chat', currentUserViewChat);
           
             } catch (err) {
               console.error("Error in user-create-direct-chat:", err);
