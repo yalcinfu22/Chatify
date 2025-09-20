@@ -15,7 +15,7 @@ const GroupSettingsModal = ({ chat, onClose, onUpdate }) => {
 
     setLoading(true);
     try {
-      const { data } = await fetchWithToken(`/chats/${chat._id}`, {
+      const { data } = await fetchWithToken(`/chats/${chat._id}`, { // todo
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: groupName })
@@ -46,7 +46,7 @@ const GroupSettingsModal = ({ chat, onClose, onUpdate }) => {
       formData.append('groupPicture', groupPicture);
 
       const token = localStorage.getItem('token');
-      const response = await fetch(`${API_BASE_URL}/chats/${chat._id}/picture`, {
+      const response = await fetch(`${API_BASE_URL}/chats/${chat._id}/picture`, { // todo
         method: 'PATCH',
         headers: { 'token': token },
         body: formData
