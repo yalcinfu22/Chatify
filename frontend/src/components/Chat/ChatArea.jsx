@@ -16,6 +16,7 @@ const ChatArea = ({ chat, onChatUpdate, onLeaveChat }) => {
   const [showDetails, setShowDetails] = useState(false);
   const [showSettings, setShowSettings] = useState(false); 
   const [isAdmin, setIsAdmin] = useState(false); // checks cur user's admin status
+  
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [cursorPosition, setCursorPosition] = useState(null);
 
@@ -50,9 +51,10 @@ const ChatArea = ({ chat, onChatUpdate, onLeaveChat }) => {
       setNewMessage(newText);
       
       // Set cursor position after emoji
+      // React state değişikliğini algılayıp kutuyu güncelledikten sonra cursor'u güncellemeliyiz yoksa pozisyonu kaybolabilir
       setTimeout(() => {
         input.selectionStart = input.selectionEnd = start + emoji.length;
-        input.focus();
+        input.focus(); // focus'u tekrar inputa getiriyoruz yoksa emojiye tıklanınca tekrar input kutusuna tıklamak zorunda kalırdık
       }, 10);
     } else {
       // If no cursor position, append to end
