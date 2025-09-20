@@ -6,8 +6,10 @@ import UserRepository from './repository/userRepository.js';
 const userRepository = new UserRepository();
 
 import AuthorizationController from './controllers/authorizationController.js';
-import { cpuUsage } from 'process';
 const authorizationController = new AuthorizationController();
+
+import ChatService from './services/chatService.js';
+const chatService = new ChatService();
 
 const { success, error } = consola;
 
@@ -87,23 +89,41 @@ export const initializeSocket = (httpServer) => {
             }
         });
 
-        socket.on('user-create-direct-chat', (chatDetails) => {
-            const { _id, members, creator } = chatDetails;
-            if (_id) {
-                socket.join(_id.toString());
-                console.log(`Creator ${username} joined direct chat room ${_id}`);
+        socket.on('user-create-direct-chat', async (chatDetails) => {
+            try {
+              const { _id, members, creator } = chatDetails;
+            
+              if (!_id || !Array.isArray(members) || members.length !== 2) {
+                console.log("Invalid direct chat");
+                return;
+              }
+          
+              socket.join(_id.toString());
+              const otherMember = members.find(m => m._id !== creator);
+              const currentUserViewChat = await chatService.getDirectChatForUser(creator, otherMember._id);
+              if(otherMember) {
+                // Fetch from DB for creator
+                if (onlineUsers.has(otherMember._id)) {
+                  const otherSocketId = onlineUsers.get(otherMember._id);
+                  const otherSocket = io.sockets.sockets.get(otherSocketId);
                 
-                const otherMember = members.find(member => member._id !== creator);
-                if (otherMember && onlineUsers.has(otherMember._id)) {
-                    // Get the other member's single socket ID
-                    const otherSocketId = onlineUsers.get(otherMember._id);
-                    const otherSocket = io.sockets.sockets.get(otherSocketId);
-                    
-                    if (otherSocket) {
-                        otherSocket.join(_id.toString());
-                        console.log(`Added ${otherMember.username} to direct chat room ${_id}`);
-                    }
+                  if (otherSocket) {
+                    otherSocket.join(_id.toString());
+                    console.log(`Added ${otherMember.username} to direct chat room ${_id}`);
+                    // Fetch from DB for other member
+                    const otherUserViewChat = await chatService.getDirectChatForUser(otherMember._id, creator);
+                    console.log(otherUserViewChat)
+                    io.to(otherSocketId).emit('user-added-to-direct-chat', otherUserViewChat);
+                  }
                 }
+              }
+              // Emit back to creator
+              console.log(currentUserViewChat)
+              socket.emit('direct-chat-created', currentUserViewChat);
+          
+            } catch (err) {
+              console.error("Error in user-create-direct-chat:", err);
+              socket.emit("error", { message: "Failed to create direct chat" });
             }
         });
 

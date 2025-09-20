@@ -261,40 +261,54 @@ export default class ChatService {
         }
     }
 
+    transformChatForUser(chat, userId) {
+        const chatObject = chat.toObject ? chat.toObject() : chat;
+        let displayName = '';
+        let groupPicture = null;
+        
+        if (chatObject.isGroupChat) {
+            displayName = chatObject.name;
+            groupPicture = chatObject.groupPicture?.url || null;
+        } else {
+            const otherUser = chatObject.members.find(
+                member => member._id.toString() !== userId.toString()
+            );
+            if (otherUser) {
+                displayName = `${otherUser.name} ${otherUser.surname}`;
+                groupPicture = otherUser.profilePicture?.url || null;
+            } else {
+                displayName = 'Bilinmeyen Kullanıcı';
+            }
+        }
+
+        return {
+            _id: chatObject._id,
+            isGroupChat: chatObject.isGroupChat,
+            displayName,
+            groupPicture,
+            latestMessage: chatObject.latestMessage,
+            updatedAt: chatObject.updatedAt,
+        };
+    };
+
+    async getDirectChatForUser(userId, recipientId) {
+        try {
+            const directChat = await chatRepository.findAndEnrichDirectChatBetweenUsers(userId, recipientId)
+            const transformedDirectChatForUser = this.transformChatForUser(directChat, userId)
+            return { success: true, data: transformedDirectChatForUser };
+        } catch (error) {
+            console.error("getDirectChatForUser servisinde hata:", error);
+            return { success: false, errorMessage: "Karşılıklı sohbet getirilirken bir hata oluştu." };
+        }
+    }
+
     async getUserChats(userId) {
         try {
             const userChats = await chatRepository.findUserChats(userId);
 
-            const transformedChats = userChats.map(chat => {
-                const chatObject = chat.toObject();
-
-                let displayName = '';
-                let groupPicture = null;
-
-                if (chatObject.isGroupChat) {
-                    displayName = chatObject.name;
-                    groupPicture = chatObject.groupPicture?.url || null;
-                } else {
-                    const otherUser = chatObject.members.find(
-                        member => member._id.toString() !== userId.toString()
-                    );
-                    if (otherUser) {
-                        displayName = `${otherUser.name} ${otherUser.surname}`;
-                        groupPicture = otherUser.profilePicture?.url || null;
-                    } else {
-                        displayName = 'Bilinmeyen Kullanıcı';
-                    }
-                }
-
-                return {
-                    _id: chatObject._id,
-                    isGroupChat: chatObject.isGroupChat,
-                    displayName,
-                    groupPicture,
-                    latestMessage: chatObject.latestMessage,
-                    updatedAt: chatObject.updatedAt,
-                };
-            });
+            const transformedChats = userChats.map(chat => 
+                this.transformChatForUser(chat, userId)
+            );
 
             return { success: true, data: transformedChats };
 

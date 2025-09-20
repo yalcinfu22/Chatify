@@ -72,12 +72,12 @@ const MainChat = () => {
       };
       
       const otherChats = prev.filter(chat => chat._id !== chatId);
-      return [refreshedChat, ...otherChats]; // Sadece başa taşı, animasyon yok
+      return [refreshedChat, ...otherChats]; // Sadece başa taşı, todo: animasyonlu olsun
     });
   };
 
   useEffect(() => {
-    const handleNavbarUpdate = (msgDetails) => {
+    const handleNewMessage = (msgDetails) => {
       // Mesaj detaylarını ayrıştır
       const { chat_id, sender, chatUpdatedAt, ...rest } = msgDetails;
       const newMessage = { sender, ...rest }; // include sender explicitly
@@ -86,9 +86,20 @@ const MainChat = () => {
     };
     
     if(socket) {
-      socket.on("new-message", handleNavbarUpdate);
+      socket.on("new-message", handleNewMessage);
     }
   }, [socket, user]);
+
+  useEffect(() => {
+    const handleNewDirectChat = (chatDetails) => {
+
+    };
+
+    if(socket) {
+      socket.on("user-added-to-direct-chat", handleNewDirectChat);
+    }
+  }, [socket, user]);
+
 
   const handleLeaveChat = (chatId) => {
     setChats(prev => prev.filter(chat => chat._id !== chatId));
@@ -114,10 +125,7 @@ const MainChat = () => {
       <ChatSidebar
         chats={chats}
         selectedChat={selectedChat}
-        onSelectChat={(chat) => {
-          console.log('Selecting chat:', chat);
-          setSelectedChat(chat);
-        }}
+        onSelectChat={setSelectedChat}
         onRefresh={fetchChats}
         onJoinGroup={handleJoinGroup}
         highlightChatId={highlightChatId}  // Animation props

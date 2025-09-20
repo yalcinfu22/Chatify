@@ -20,7 +20,34 @@ export default class ChatRepository {
             throw error 
         }
     }
+    async findAndEnrichDirectChatBetweenUsers(userId1, userId2, session = null) {
+        try {
+            const chat = await Chat.findOne({
+                isGroupChat: false,
+                members: { $all: [userId1, userId2] },
+            })
+            .populate({
+                path: 'members', // Birebir sohbetler için diğer kullanıcıyı bulmak amacıyla TÜM üyeleri çekiyoruz
+                select: 'name surname profilePicture', // ...ama sadece bu alanları alıyoruz
+                populate: { path: 'profilePicture', select: 'url' }
+            })
+            .populate({
+                path: 'groupPicture', // Direct chat'te null olacak ama tutarlılık için
+                select: 'url'
+            })
+            .populate({
+                path: 'latestMessage', // Son mesajı alıyoruz
+                select: 'content contentType sender createdAt',
+                populate: { path: 'sender', select: 'name' }
+            })
+            .session(session);
 
+            return chat;
+        } catch (error) {
+            console.log("Error in findAndEnrichDirectChatBetweenUsers repository", error);
+            throw error;
+        }
+    }
     async findChatByInvitationCode(inviteCode) {
         try {
             const chat = await Chat.findOne({ 
