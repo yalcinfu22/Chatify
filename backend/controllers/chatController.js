@@ -126,4 +126,20 @@ export default class ChatController {
             });
         }
     }
+
+    async startOrJoinVideoCall(req, res) { // todo: status kodlar eklenmeli
+        try {
+            const {chatId} = req.params;
+            const userId = req.user.userId;
+            
+            const result = await chatService.startOrJoinVideoCall(chatId, userId);
+            return res.status(200).json(result);
+        } catch (error) {
+            console.error('Error in leaveChat:', error);
+            return res.status(500).json({
+                success: false,
+                message: 'Internal server error'
+            });    
+        }
+    }
 }

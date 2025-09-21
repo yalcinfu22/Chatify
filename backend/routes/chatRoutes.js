@@ -126,4 +126,11 @@ router.get(
     messageController.getLatestMessages
 )
 
+router.post(
+    '/:chatId/video-call', 
+    [ param('chatId', 'Geçerli bir sohbet IDsi girilmelidir.').isMongoId() ],
+    validationController.validateRequest,
+    chatController.startOrJoinVideoCall
+)
+
 export default router

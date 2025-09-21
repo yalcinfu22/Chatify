@@ -20,9 +20,77 @@ const imageRepository = new ImageRepository();
 import mongoose from 'mongoose' // transcation
 import generateInviteCode from '../helpers/nanoid.js';
 import { canUserManageGroup, isUserMemberOfChat } from '../helpers/permission.js';
+
 import test from '../utils/test.js';
+import { ZegoUIKitPrebuilt } from '@zegocloud/zego-uikit-prebuilt';
+import { App_ID, VIDEO_SECRET } from '../config/index.js';
 
 export default class ChatService {
+
+    async startOrJoinVideoCall(chatId, userId) {
+        const session = await mongoose.startSession();
+        try {
+            session.startTransaction();
+        
+            // Önce gerekli chat ve kullanıcı bilgilerini alalım.
+            const chat = await chatRepository.findNonDeletedById(chatId, session);
+            if (!chat || !isUserMemberOfChat(chat, userId)) {
+                throw new Error("Sohbet bulunamadı veya bu sohbete üye değilsiniz.");
+            }
+            const user = await userRepository.findById(userId, session);
+        
+            // --- REDIS KONTROLÜ ---
+            const redisCallKey = `call:${chatId}`;
+            const existingCall = await redisClient.get(redisCallKey);
+        
+            if (existingCall) {
+                // ÇAĞRI ZATEN VAR, KULLANICIYI DAHİL ET (JOINER)
+                const callData = JSON.parse(existingCall);
+                await redisClient.sAdd(`call:${chatId}:participants`, userId); // Katılımcı set'ine ekle
+                await redisClient.set(`user:${userId}:activeCall`, chatId); // Tersine haritalama
+                await userRepository.setUserStatus(userId, 'onCall', session);
+            
+                await session.commitTransaction(); // Sadece status değişti, commit edelim.
+                return { success: true, data: { token: callData.token, isJoining: true, isGroupCall: chat.isGroupChat } };
+            } else {
+                // ÇAĞRI YOK, YENİ BİR ÇAĞRI OLUŞTUR (CREATOR)
+                await userRepository.setUserStatus(userId, 'onCall', session);
+                const systemMessageContent = `${user.name} bir görüntülü görüşme başlattı.`;
+                await messageService.sendMessage(chatId, userId, null, systemMessageContent, 'system', session);
+            
+                await session.commitTransaction(); // DB işlemleri bitti, onayla.
+            
+                // --- TRANSACTION DIŞI İŞLEMLER ---
+                const token = ZegoUIKitPrebuilt.generateKitTokenForTest(App_ID, VIDEO_SECRET, chatId, userId, user.name) // Zego token'ını oluştur
+            
+                // Redis'e çağrı bilgilerini kaydet
+                const callData = { token, createdBy: userId };
+                await redisClient.set(redisCallKey, JSON.stringify(callData), { EX: 7200 }); // 2 saat sonra sil
+                await redisClient.sAdd(`call:${chatId}:participants`, userId); // Katılımcı set'i
+                await redisClient.set(`user:${userId}:activeCall`, chatId, { EX: 7200 }); // Tersine haritalama
+            
+                // Diğer üyelere davet gönder
+                const io = getIO();
+                chat.members.forEach(memberId => {
+                    if (memberId.toString() !== userId.toString()) {
+                        io.to(memberId.toString()).emit('invited-to-call', {
+                            chatId,
+                            callerName: user.name
+                        });
+                    }
+                });
+            
+                return { success: true, data: { token, isJoining: false, isGroupCall: chat.isGroupChat } };
+            }
+        } catch (error) {
+            await session.abortTransaction();
+            // Hata durumunda kullanıcının durumunu 'online' yapmayı düşünebiliriz.
+            await userRepository.setUserStatus(userId, 'online');
+            throw error;
+        } finally {
+            session.endSession();
+        }
+    }
 
     async createDirectChat(creatorId, recipientIdentifier) { // TODO: REVIEW STATUS CODES, MAKE CONTROLLER DUMBER
         // Hata durumunda geri alınacak kaynakları izlemek için değişkenler

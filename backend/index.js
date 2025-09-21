@@ -9,6 +9,7 @@ import { initializeSocket } from "./socket.js";
 import { URL, PORT } from "./config/index.js"; // config => .env port ve db bilgilerine tek yerden erişmek için
 import { instrument } from '@socket.io/admin-ui';
 import { createSystemUser } from './system.js';
+import { connectRedis } from './/redis.js'; // Import et
 
 import Auth from './utils/auth.js'
 const auth = new Auth();
@@ -34,7 +35,7 @@ import chatRoutes from "./routes/chatRoutes.js";
 const startApp = async () => {
   try {
     await mongoose.connect(URL);
-    
+    await connectRedis();
     const corsOptions = {
       origin: ["http://localhost:5173", "http://localhost:3001"],
       credentials: true,
