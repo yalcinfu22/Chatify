@@ -22,12 +22,11 @@ import generateInviteCode from '../helpers/nanoid.js';
 import { canUserManageGroup, isUserMemberOfChat } from '../helpers/permission.js';
 
 import test from '../utils/test.js';
-import { ZegoUIKitPrebuilt } from '@zegocloud/zego-uikit-prebuilt';
-import { App_ID, VIDEO_SECRET } from '../config/index.js';
+import { APP_ID, VIDEO_SECRET } from '../config/index.js';
 
 export default class ChatService {
 
-    async startOrJoinVideoCall(chatId, userId) {
+    /*async startOrJoinVideoCall(chatId, userId) {
         const session = await mongoose.startSession();
         try {
             session.startTransaction();
@@ -61,8 +60,20 @@ export default class ChatService {
                 await session.commitTransaction(); // DB işlemleri bitti, onayla.
             
                 // --- TRANSACTION DIŞI İŞLEMLER ---
-                const token = ZegoUIKitPrebuilt.generateKitTokenForTest(App_ID, VIDEO_SECRET, chatId, userId, user.name) // Zego token'ını oluştur
-            
+                const result = generateToken04(
+                  parseInt(APP_ID),
+                  userId,
+                  VIDEO_SECRET,
+                  3600, // 1 saat
+                  '' // payload boş
+                );
+
+                if (result.errorCode !== 0) {
+                  return res.status(500).json({ error: 'Token oluşturulamadı: ' + result.errorMessage });
+                } 
+                
+                const token = result.token;
+
                 // Redis'e çağrı bilgilerini kaydet
                 const callData = { token, createdBy: userId };
                 await redisClient.set(redisCallKey, JSON.stringify(callData), { EX: 7200 }); // 2 saat sonra sil
@@ -90,7 +101,7 @@ export default class ChatService {
         } finally {
             session.endSession();
         }
-    }
+    } */
 
     async createDirectChat(creatorId, recipientIdentifier) { // TODO: REVIEW STATUS CODES, MAKE CONTROLLER DUMBER
         // Hata durumunda geri alınacak kaynakları izlemek için değişkenler
@@ -150,7 +161,7 @@ export default class ChatService {
             const populatedChat = await newChat.populate([
                 { 
                     path: 'members', 
-                    select: 'name surname username profilePicture isOnline',
+                    select: 'name surname username profilePicture Status',
                     options: { session },
                 },
 
@@ -436,7 +447,7 @@ export default class ChatService {
 
             const updatedChat = await chatRepository.addUserToChatMembers(chat._id, userId, {
                 path: 'members',
-                select: 'name surname profilePicture isOnline',
+                select: 'name surname profilePicture Status',
                 populate: { path: 'profilePicture', select: 'url' }
             });
 

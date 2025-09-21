@@ -19,14 +19,14 @@ const ChatDetailsModal = ({ chat, onClose }) => {
     if (!socket) return;
 
     const handleStatusChange = (data) => {
-      // örneğin data = { userId, isOnline }
+      // örneğin data = { userId, Status }
       setDetails((prev) => {
         if (!prev) return prev;
         return {
           ...prev,
           members: prev.members.map(m =>
             m._id === data.userId 
-              ? { ...m, isOnline: data.isOnline, lastSeen: data.lastSeen ?? m.lastSeen }
+              ? { ...m, Status: data.Status, lastSeen: data.lastSeen ?? m.lastSeen }
               : m
           )
         };
@@ -162,8 +162,10 @@ const ChatDetailsModal = ({ chat, onClose }) => {
                       {isAdmin(member._id) && !isCreator(member._id) && (
                         <span className="role-badge admin">Admin</span>
                       )}
-                      {member.isOnline ? (
+                      {member.Status === "online" ? (
                         <span className="online-status online">● Online</span>
+                      ) : member.Status === "onCall" ? (
+                        <span className="online-status oncall">● On Call</span>
                       ) : (
                         <span className="online-status offline">● Offline</span>
                       )}

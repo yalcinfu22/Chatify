@@ -47,7 +47,7 @@ export default class UserService {
           }
         );
 
-        user = await userRepository.setUserStatus(user._id, true);
+        user = await userRepository.setUserStatus(user._id, "online");
         result = serializer.tokenResponseSerializers(user, token);
  
         return {

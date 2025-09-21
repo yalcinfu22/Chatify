@@ -39,7 +39,7 @@ export default class UserRepository {
     
     async setUserStatus(userId, status) {
       try {
-        const updateData = { isOnline: status };
+        const updateData = { Status: status };
 
         // only set lastSeen when going offline
         if (!status) {

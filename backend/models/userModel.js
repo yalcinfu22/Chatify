@@ -36,9 +36,10 @@ const userSchema = new mongoose.Schema({ // bir hizmet kullanıcısı tam adı, 
           ref: 'Chat', // User modeline referans
       },
   ],
-  isOnline: {
-    type: Boolean,
-    default: false,
+  Status: {
+    type: String,
+    enum: ["online", "offline", "onCall"],
+    default: "offline",
   },
   isDeleted: {
     type: Boolean,

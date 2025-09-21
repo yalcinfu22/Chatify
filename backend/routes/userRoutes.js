@@ -36,7 +36,7 @@ router.post( // FORM DATA WILL BE SENT
     check("surname", "Surname is required").notEmpty().isString(),
     check("phone", "Phone is required").notEmpty().isString().isMobilePhone(),
     check("chats", "chats field must be empty").isEmpty(), // controller'da bu alanları görmezden gelsek de dolu gelirse reddediyoruz
-    check("isOnline", "isOnline field must be empty").isEmpty(),
+    check("Status", "Status field must be empty").isEmpty(),
     check("isDeleted", "isDeleted field must be empty").isEmpty(),
     check("deletedBy", "deletedBy field must be empty").isEmpty(),
   ],

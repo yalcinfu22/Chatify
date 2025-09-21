@@ -66,13 +66,13 @@ export const initializeSocket = (httpServer) => {
         try {
             // Set user as online and add to map (store single socket ID)
             onlineUsers.set(userId, socket.id);
-            await userRepository.setUserStatus(userId, true);
+            await userRepository.setUserStatus(userId, "online");
 
             const chatIds = await userRepository.findUserChatIds(userId);
             chatIds.forEach(chatId => {
                 socket.to(chatId.toString()).emit('user-status-changed', { 
                     userId, 
-                    isOnline: true 
+                    Status: "online",
                 });
             });
             console.log(`User ${username} is ONLINE with single session.`);
@@ -161,13 +161,13 @@ export const initializeSocket = (httpServer) => {
         socket.on('disconnect', async () => {
             if (onlineUsers.has(userId)) {
                 onlineUsers.delete(userId);
-                await userRepository.setUserStatus(userId, false);
+                await userRepository.setUserStatus(userId, "offline");
                 
                 const chatIds = await userRepository.findUserChatIds(userId);
                 chatIds.forEach(chatId => {
                     io.to(chatId.toString()).emit('user-status-changed', {
                         userId,
-                        isOnline: false,
+                        Status: "offline",
                     });
                 });
                 console.log(`User ${username} disconnected and went OFFLINE.`);
