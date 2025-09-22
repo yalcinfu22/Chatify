@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { fetchWithToken, API_BASE_URL } from '../../services/api';
+import toast from 'react-hot-toast';
 
 const GroupSettingsModal = ({ chat, onClose, onUpdate }) => {
   const [loading, setLoading] = useState(false);
@@ -79,13 +80,13 @@ const GroupSettingsModal = ({ chat, onClose, onUpdate }) => {
       });
 
       if (data.success) {
-        alert('Group deleted successfully');
+        toast.success('Group deleted successfully');
         window.location.reload(); // Refresh to update the chat list
       } else {
-        alert(data.errorMessage || 'Failed to delete group');
+        toast.error(data.errorMessage || 'Failed to delete group');
       }
     } catch (error) {
-      alert('Failed to delete group');
+      toast.error('Failed to delete group');
     }
     setLoading(false);
   };

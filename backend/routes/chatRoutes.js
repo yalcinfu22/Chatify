@@ -18,11 +18,12 @@ import MessageController from "../controllers/messageController.js";
 const messageController = new MessageController();
 
 import { groupUpload, messageUpload } from "../middlewares/upload.js";
+import { userRateLimiter } from './../middlewares/userRateLimiter.js';
 
 import test from "../utils/test.js";
 
 router.use(authorizationController.validateToken);
-
+router.use(userRateLimiter)
 
 router.post(
   "/direct",

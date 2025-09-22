@@ -14,7 +14,12 @@ const userController = new UserController();
 
 import {profileUpload} from "../middlewares/upload.js";
 
+import { guestRateLimiter } from "../middlewares/guestRateLimiter.js";
+
 import test from "../utils/test.js";
+
+
+router.use(guestRateLimiter)
 
 router.post(
   "/login",

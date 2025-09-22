@@ -1,14 +1,26 @@
-// services/chatService.js
+// services/chatService.js - Updated startOrJoinVideoCall method
 import fs from 'fs';
-import { nanoid } from 'nanoid'; // eşşiz id üreticisi
+import { nanoid } from 'nanoid';
+import mongoose from 'mongoose';
 
-// Gerekli Repository ve Service'leri çağırıyoruz
+// Repository and Service imports
 import ChatRepository from '../repository/chatRepository.js';
 import ImageService from './imageService.js';
-import UserRepository from '../repository/userRepository.js'; // Kullanıcıyı güncellemek için
+import UserRepository from '../repository/userRepository.js';
 import MessageRepository from '../repository/messageRepository.js';
 import MessageService from './messageService.js';
 import ImageRepository from '../repository/imageRepository.js';
+
+// ZEGO token generator import
+import { generateRoomToken, generateBasicToken } from '../utils/zegoTokenGenerator.js';
+
+// Config imports
+import { APP_ID, VIDEO_SECRET } from '../config/index.js';
+import { redisClient } from '../redis.js'; // Assuming you have this
+
+// Helper imports
+import generateInviteCode from '../helpers/nanoid.js';
+import { canUserManageGroup, isUserMemberOfChat } from '../helpers/permission.js';
 
 const chatRepository = new ChatRepository();
 const imageService = new ImageService();
@@ -17,91 +29,222 @@ const messageRepository = new MessageRepository();
 const messageService = new MessageService();
 const imageRepository = new ImageRepository();
 
-import mongoose from 'mongoose' // transcation
-import generateInviteCode from '../helpers/nanoid.js';
-import { canUserManageGroup, isUserMemberOfChat } from '../helpers/permission.js';
-
-import test from '../utils/test.js';
-import { APP_ID, VIDEO_SECRET } from '../config/index.js';
-
 export default class ChatService {
-
-    /*async startOrJoinVideoCall(chatId, userId) {
+    
+    /**
+     * Start or join a video call in a chat
+     * @param {string} chatId - Chat ID
+     * @param {string} userId - User ID
+     * @returns {Object} Call data including token and status
+     */
+    async startOrJoinVideoCall(chatId, userId) {
         const session = await mongoose.startSession();
+        
         try {
             session.startTransaction();
-        
-            // Önce gerekli chat ve kullanıcı bilgilerini alalım.
+            
+            // Validate chat and user membership
             const chat = await chatRepository.findNonDeletedById(chatId, session);
-            if (!chat || !isUserMemberOfChat(chat, userId)) {
-                throw new Error("Sohbet bulunamadı veya bu sohbete üye değilsiniz.");
+            if (!chat) {
+                throw new Error("Sohbet bulunamadı.");
             }
+            
+            if (!isUserMemberOfChat(chat, userId)) {
+                throw new Error("Bu sohbete üye değilsiniz.");
+            }
+            
             const user = await userRepository.findById(userId, session);
-        
-            // --- REDIS KONTROLÜ ---
-            const redisCallKey = `call:${chatId}`;
-            const existingCall = await redisClient.get(redisCallKey);
-        
-            if (existingCall) {
-                // ÇAĞRI ZATEN VAR, KULLANICIYI DAHİL ET (JOINER)
-                const callData = JSON.parse(existingCall);
-                await redisClient.sAdd(`call:${chatId}:participants`, userId); // Katılımcı set'ine ekle
-                await redisClient.set(`user:${userId}:activeCall`, chatId); // Tersine haritalama
-                await userRepository.setUserStatus(userId, 'onCall', session);
-            
-                await session.commitTransaction(); // Sadece status değişti, commit edelim.
-                return { success: true, data: { token: callData.token, isJoining: true, isGroupCall: chat.isGroupChat } };
-            } else {
-                // ÇAĞRI YOK, YENİ BİR ÇAĞRI OLUŞTUR (CREATOR)
-                await userRepository.setUserStatus(userId, 'onCall', session);
-                const systemMessageContent = `${user.name} bir görüntülü görüşme başlattı.`;
-                await messageService.sendMessage(chatId, userId, null, systemMessageContent, 'system', session);
-            
-                await session.commitTransaction(); // DB işlemleri bitti, onayla.
-            
-                // --- TRANSACTION DIŞI İŞLEMLER ---
-                const result = generateToken04(
-                  parseInt(APP_ID),
-                  userId,
-                  VIDEO_SECRET,
-                  3600, // 1 saat
-                  '' // payload boş
-                );
-
-                if (result.errorCode !== 0) {
-                  return res.status(500).json({ error: 'Token oluşturulamadı: ' + result.errorMessage });
-                } 
-                
-                const token = result.token;
-
-                // Redis'e çağrı bilgilerini kaydet
-                const callData = { token, createdBy: userId };
-                await redisClient.set(redisCallKey, JSON.stringify(callData), { EX: 7200 }); // 2 saat sonra sil
-                await redisClient.sAdd(`call:${chatId}:participants`, userId); // Katılımcı set'i
-                await redisClient.set(`user:${userId}:activeCall`, chatId, { EX: 7200 }); // Tersine haritalama
-            
-                // Diğer üyelere davet gönder
-                const io = getIO();
-                chat.members.forEach(memberId => {
-                    if (memberId.toString() !== userId.toString()) {
-                        io.to(memberId.toString()).emit('invited-to-call', {
-                            chatId,
-                            callerName: user.name
-                        });
-                    }
-                });
-            
-                return { success: true, data: { token, isJoining: false, isGroupCall: chat.isGroupChat } };
+            if (!user) {
+                throw new Error("Kullanıcı bulunamadı.");
             }
+            
+            // Check if call already exists in Redis
+            const redisCallKey = `call:${chatId}`;
+            let existingCall = null;
+            
+            try {
+                existingCall = await redisClient.get(redisCallKey);
+            } catch (redisError) {
+                console.error('Redis error:', redisError);
+                // Continue without Redis if it fails
+            }
+            
+            if (existingCall) {
+                // JOIN EXISTING CALL
+                const callData = JSON.parse(existingCall);
+                
+                // Add user to participants
+                await redisClient.sAdd(`call:${chatId}:participants`, userId);
+                await redisClient.set(`user:${userId}:activeCall`, chatId, { EX: 7200 });
+                
+                // Update user status
+                await userRepository.setUserStatus(userId, 'onCall', session);
+                
+                // Generate a new token for this user
+                // For joining users, we generate a new token specific to them
+                const tokenResult = generateRoomToken(
+                    parseInt(APP_ID),
+                    userId,
+                    VIDEO_SECRET,
+                    3600, // 1 hour
+                    chatId, // Use chatId as roomId
+                    {
+                        1: 1, // Allow login
+                        2: 1  // Allow publish
+                    }
+                );
+                
+                if (tokenResult.errorCode !== 0) {
+                    throw new Error(`Token oluşturulamadı: ${tokenResult.errorMessage}`);
+                }
+                
+                await session.commitTransaction();
+                
+                return {
+                    success: true,
+                    data: {
+                        token: tokenResult.token,
+                        isJoining: true,
+                        isGroupCall: chat.isGroupChat,
+                        chatId: chatId,
+                        expiresAt: Date.now() + (3600 * 1000)
+                    }
+                };
+                
+            } else {
+                // CREATE NEW CALL
+                
+                // Update user status
+                await userRepository.setUserStatus(userId, 'onCall', session);
+                
+                // Send system message
+                const systemMessageContent = `${user.name} bir görüntülü görüşme başlattı.`;
+                await messageService.sendMessage(
+                    chatId,
+                    userId,
+                    null,
+                    systemMessageContent,
+                    'system',
+                    session
+                );
+                
+                await session.commitTransaction();
+                
+                // Generate token for the call creator
+                const tokenResult = generateRoomToken(
+                    parseInt(APP_ID),
+                    userId,
+                    VIDEO_SECRET,
+                    3600, // 1 hour
+                    chatId, // Use chatId as roomId
+                    {
+                        1: 1, // Allow login
+                        2: 1  // Allow publish
+                    }
+                );
+                
+                if (tokenResult.errorCode !== 0) {
+                    throw new Error(`Token oluşturulamadı: ${tokenResult.errorMessage}`);
+                }
+                
+                // Store call data in Redis
+                const callData = {
+                    token: tokenResult.token,
+                    createdBy: userId,
+                    createdAt: Date.now(),
+                    chatId: chatId
+                };
+                
+                try {
+                    await redisClient.set(redisCallKey, JSON.stringify(callData), { EX: 7200 });
+                    await redisClient.sAdd(`call:${chatId}:participants`, userId);
+                    await redisClient.set(`user:${userId}:activeCall`, chatId, { EX: 7200 });
+                } catch (redisError) {
+                    console.error('Redis storage error:', redisError);
+                    // Continue even if Redis fails
+                }
+            
+                return {
+                    success: true,
+                    data: {
+                        token: tokenResult.token,
+                        isJoining: false,
+                        isGroupCall: chat.isGroupChat,
+                        chatId: chatId,
+                        expiresAt: Date.now() + (3600 * 1000)
+                    }
+                };
+            }
+            
         } catch (error) {
             await session.abortTransaction();
-            // Hata durumunda kullanıcının durumunu 'online' yapmayı düşünebiliriz.
-            await userRepository.setUserStatus(userId, 'online');
+            
+            // Reset user status on error
+            try {
+                await userRepository.setUserStatus(userId, 'online');
+            } catch (statusError) {
+                console.error('Failed to reset user status:', statusError);
+            }
+            
+            console.error('Video call error:', error);
+            throw error;
+            
+        } finally {
+            session.endSession();
+        }
+    }
+    
+    /**
+     * End a video call
+     * @param {string} chatId - Chat ID
+     * @param {string} userId - User ID
+     */
+    async endVideoCall(chatId, userId) {
+        const session = await mongoose.startSession();
+        
+        try {
+            session.startTransaction();
+            
+            // Update user status
+            await userRepository.setUserStatus(userId, 'online', session);
+            
+            // Remove from Redis
+            await redisClient.sRem(`call:${chatId}:participants`, userId);
+            await redisClient.del(`user:${userId}:activeCall`);
+            
+            // Check if call should end (no participants left)
+            const remainingParticipants = await redisClient.sCard(`call:${chatId}:participants`);
+            
+            if (remainingParticipants === 0) {
+                // End the call completely
+                await redisClient.del(`call:${chatId}`);
+                await redisClient.del(`call:${chatId}:participants`);
+                
+                // Send system message
+                const user = await userRepository.findById(userId, session);
+                const systemMessageContent = `Görüntülü görüşme sona erdi.`;
+                await messageService.sendMessage(
+                    chatId,
+                    userId,
+                    null,
+                    systemMessageContent,
+                    'system',
+                    session
+                );
+            }
+            
+            await session.commitTransaction();
+            
+            return { success: true };
+            
+        } catch (error) {
+            await session.abortTransaction();
+            console.error('End video call error:', error);
             throw error;
         } finally {
             session.endSession();
         }
-    } */
+    }
 
     async createDirectChat(creatorId, recipientIdentifier) { // TODO: REVIEW STATUS CODES, MAKE CONTROLLER DUMBER
         // Hata durumunda geri alınacak kaynakları izlemek için değişkenler
