@@ -176,6 +176,12 @@ const ChatArea = ({ chat, onChatUpdate, onLeaveChat }) => {
         socket.emit('send-message', newMsgDetails)
         setNewMessage('');
         setSelectedFile(null);
+      } else {
+          if(response.status === 429) {
+            toast.error(data.errorMessage)
+          } else {
+            throw new Error(data.errorMessage)
+          }
       }
     } catch (error) {
       console.error('Failed to send message:', error);

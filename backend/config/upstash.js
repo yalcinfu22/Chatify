@@ -14,7 +14,7 @@ export const burstLimiter = new Ratelimit({
 
 export const sustainedLimiter = new Ratelimit({
   redis,
-  limiter: Ratelimit.slidingWindow(500, "5 m"),
+  limiter: Ratelimit.slidingWindow(300, "5 m"),
 });
 
 // Guests → stricter limits
