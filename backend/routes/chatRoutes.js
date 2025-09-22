@@ -127,11 +127,22 @@ router.get(
     messageController.getLatestMessages
 )
 
+/*
 router.post(
     '/:chatId/video-call', 
     [ param('chatId', 'Geçerli bir sohbet IDsi girilmelidir.').isMongoId() ],
     validationController.validateRequest,
     chatController.startOrJoinVideoCall
 )
+*/
+
+router.patch(
+    "/:chatId/group-picture",
+    groupUpload.single('groupPicture'),
+    [ param('chatId', 'Geçerli bir sohbet IDsi girilmelidir.').isMongoId() ],
+    validationController.validateRequest,
+    chatController.updateGroupPicure
+)
+
 
 export default router

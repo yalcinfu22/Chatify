@@ -21,7 +21,7 @@ body {
 }
 
 .auth-card {
-  background: white;
+  background: rgba(255, 255, 255, 1); /* semi-transparent white */
   border-radius: 12px;
   padding: 32px;
   width: 100%;

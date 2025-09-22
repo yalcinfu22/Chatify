@@ -8,7 +8,7 @@ import { useSocket } from '../../contexts/SocketContext';
 import { toast } from 'react-hot-toast'; // will be used in the future
 import EmojiPicker from 'emoji-picker-react';
 
-const ChatArea = ({ chat, onChatUpdate, onLeaveChat }) => {
+const ChatArea = ({ chat, onLeaveChat }) => {
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(false);
   const [newMessage, setNewMessage] = useState('');
@@ -61,7 +61,6 @@ const ChatArea = ({ chat, onChatUpdate, onLeaveChat }) => {
       setNewMessage(prevMessage => prevMessage + emoji);
     }
   };
-
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (showEmojiPicker && !event.target.closest('.emoji-picker-container')) {
@@ -624,10 +623,6 @@ const ChatArea = ({ chat, onChatUpdate, onLeaveChat }) => {
         <GroupSettingsModal
           chat={chat}
           onClose={() => setShowSettings(false)}
-          onUpdate={() => {
-            checkAdminStatus();
-            onChatUpdate && onChatUpdate(chat._id);
-          }}
         />
       )}
     </div>

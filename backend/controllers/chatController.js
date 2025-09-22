@@ -49,6 +49,23 @@ export default class ChatController {
         }
     }
 
+    async updateGroupPicure(req, res) {
+        try {
+            const { userId } = req.user
+            const { chatId } = req.params
+            const result = await chatService.updateGroupPicture(chatId, userId, req.file)
+            if (!result.success) {
+              return res.status(result.statusCode).send(result.errorMessage);
+            }
+            return res.status(result.statusCode).send(result);
+        } catch (error) {
+            return res.status(500).json({
+              success: false,
+              errorMessage: error.message || "Internal Server Error"
+            });    
+        }
+    }
+
     async createGroupChat(req, res) {
         try {
             const {userId} = req.user

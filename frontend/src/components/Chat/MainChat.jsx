@@ -39,7 +39,7 @@ const MainChat = () => {
   const selectedChatRef = useRef(selectedChat);
   selectedChatRef.current = selectedChat;
 
-  const handleChatUpdate = (chatId, senderId, newMessage, chatUpdatedAt) => {
+  const handleChatListForNewMessage = (chatId, senderId, newMessage, chatUpdatedAt) => {
     
     if(selectedChatRef.current?._id === chatId) {
       // Your sound logic
@@ -83,7 +83,7 @@ const MainChat = () => {
       const { chat_id, sender, chatUpdatedAt, ...rest } = msgDetails;
       const newMessage = { sender, ...rest }; // include sender explicitly
       // Chat listesini güncelle (her durumda)
-      handleChatUpdate(chat_id, sender._id, newMessage, chatUpdatedAt);
+      handleChatListForNewMessage(chat_id, sender._id, newMessage, chatUpdatedAt);
     };
     
     if(socket) {
@@ -141,7 +141,6 @@ const MainChat = () => {
       />
       <ChatArea
         chat={selectedChat}
-        onChatUpdate={handleChatUpdate}
         onLeaveChat={handleLeaveChat}
       />
     </div>

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { fetchWithToken, API_BASE_URL } from '../../services/api';
 import toast from 'react-hot-toast';
 
-const GroupSettingsModal = ({ chat, onClose, onUpdate }) => {
+const GroupSettingsModal = ({ chat, onClose }) => {
   const [loading, setLoading] = useState(false);
   const [groupName, setGroupName] = useState(chat.name || chat.displayName || '');
   const [groupPicture, setGroupPicture] = useState(null);
@@ -47,23 +47,20 @@ const GroupSettingsModal = ({ chat, onClose, onUpdate }) => {
       formData.append('groupPicture', groupPicture);
 
       const token = localStorage.getItem('token');
-      const response = await fetch(`${API_BASE_URL}/chats/${chat._id}/picture`, { // todo
+      const response = await fetch(`${API_BASE_URL}/chats/${chat._id}/group-picture`, {
         method: 'PATCH',
         headers: { 'token': token },
         body: formData
       });
-
       const data = await response.json();
-
       if (data.success) {
-        alert('Group picture updated successfully');
-        onUpdate();
+        toast.success('Group picture updated successfully');
         onClose();
       } else {
-        alert(data.errorMessage || 'Failed to update group picture');
+        toast.error(data.errorMessage || 'Failed to update group picture');
       }
     } catch (error) {
-      alert('Failed to update group picture');
+      toast.error('Failed to update group picture');
     }
     setLoading(false);
   };

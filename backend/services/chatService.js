@@ -13,7 +13,7 @@ import ImageRepository from '../repository/imageRepository.js';
 
 // ZEGO token generator import
 import { generateRoomToken, generateBasicToken } from '../utils/zegoTokenGenerator.js';
-
+import { SYSTEM_USER_ID } from '../system.js';
 // Config imports
 import { APP_ID, VIDEO_SECRET } from '../config/index.js';
 import { redisClient } from '../redis.js'; // Assuming you have this
@@ -21,6 +21,7 @@ import { redisClient } from '../redis.js'; // Assuming you have this
 // Helper imports
 import generateInviteCode from '../helpers/nanoid.js';
 import { canUserManageGroup, isUserMemberOfChat } from '../helpers/permission.js';
+import { getIoInstance } from '../socketManager.js';
 
 const chatRepository = new ChatRepository();
 const imageService = new ImageService();
@@ -30,13 +31,7 @@ const messageService = new MessageService();
 const imageRepository = new ImageRepository();
 
 export default class ChatService {
-    
-    /**
-     * Start or join a video call in a chat
-     * @param {string} chatId - Chat ID
-     * @param {string} userId - User ID
-     * @returns {Object} Call data including token and status
-     */
+    /*
     async startOrJoinVideoCall(chatId, userId) {
         const session = await mongoose.startSession();
         
@@ -194,11 +189,6 @@ export default class ChatService {
         }
     }
     
-    /**
-     * End a video call
-     * @param {string} chatId - Chat ID
-     * @param {string} userId - User ID
-     */
     async endVideoCall(chatId, userId) {
         const session = await mongoose.startSession();
         
@@ -244,7 +234,7 @@ export default class ChatService {
         } finally {
             session.endSession();
         }
-    }
+    } */
 
     async createDirectChat(creatorId, recipientIdentifier) { // TODO: REVIEW STATUS CODES, MAKE CONTROLLER DUMBER
         // Hata durumunda geri alınacak kaynakları izlemek için değişkenler
@@ -524,6 +514,138 @@ export default class ChatService {
         }
     }
 
+    async updateGroupPicture(chatId, userId, file) {
+        const session = await mongoose.startSession();
+        try {
+            session.startTransaction();
+
+            // Adım 1: Sohbeti bul ve yetkiyi kontrol et
+            const originalChat = await chatRepository.findNonDeletedById(chatId, session);
+            if (!originalChat) {
+                throw { statusCode: 404, errorMessage: "Grup sohbeti bulunamadı." };
+            }
+            if (!canUserManageGroup(originalChat, userId)) {
+                throw { statusCode: 403, errorMessage: "Bu işlemi yapma yetkiniz yok." };
+            }
+            const oldPictureId = originalChat.groupPicture;
+
+            // Adım 2: Yeni resmi Image koleksiyonuna kaydet
+            const imageResult = await imageService.saveImage(file, userId, session);
+            if (!imageResult.success) {
+                throw new Error(imageResult.errorMessage);
+            }
+            const newImage = imageResult.data;
+
+            // Adım 3: User bilgisini getir (system message için)
+            const user = await userRepository.findById(userId, session);
+            const systemMessageContent = `${user.name} ${user.surname} updated the group picture`;
+
+            // Adım 4: System mesajını kaydet
+            const messageInfo = {
+                content: systemMessageContent,
+                contentType: 'system',
+                attachment: null,
+                sender: SYSTEM_USER_ID, // import edilmeli
+                chat: chatId
+            };
+            const newMessage = await messageRepository.saveMessage(messageInfo, session);
+
+            // Adım 5: Chat'i hem yeni resim hem son mesajla birlikte güncelle (TEK SEFERDE!)
+            const updatedChat = await chatRepository.updateGroupPictureAndLatestMessage(
+                chatId, 
+                newImage._id, 
+                newMessage._id, 
+                session
+            );
+
+            // Adım 6: Eski resmi soft-delete yap
+            if (oldPictureId) {
+                try {
+                    await imageService.softDeleteById(oldPictureId, userId, session);
+                } catch (error) {
+                    console.warn('Old image soft delete failed:', error);
+                    // Ana işlemi durdurmayın
+                }
+            }
+
+            // Adım 7: TRANSACTION'I ONAYLA
+            await session.commitTransaction();
+
+            // --- Transaction bitti, şimdi populate ve bildirimler ---
+
+            // Message'ı populate et
+            const populatedMessage = await newMessage.populate([
+                {
+                    path: 'sender',
+                    select: 'name username profilePicture',
+                    populate: { 
+                        path: 'profilePicture', 
+                        select: 'url', 
+                        model: 'Image'
+                    }
+                },
+                { 
+                    path: 'attachment', 
+                    select: 'url', 
+                    model: 'Image'
+                }
+            ]);
+
+            // Response message'a chatUpdatedAt ekle
+            const responseMessage = {
+                ...populatedMessage.toObject(),
+                chatUpdatedAt: updatedChat.updatedAt
+            };
+
+            // Adım 8: WebSocket ile herkese haber ver
+            const io = getIoInstance();
+            if (io) {
+                // A) Chat güncellemesi
+                io.to(chatId).emit('chat-updated', {
+                    chatId,
+                    updatedFields: { 
+                        groupPicture: updatedChat.groupPicture,
+                        latestMessage: updatedChat.latestMessage,
+                        updatedAt: updatedChat.updatedAt
+                    }
+                });
+
+                // B) Yeni sistem mesajı
+                io.to(chatId).emit('system-message', {
+                    success: true,
+                    statusCode: 201,
+                    message: "Mesaj başarıyla gönderildi.",
+                    data: responseMessage
+                });
+            }
+
+            return { 
+                success: true, 
+                statusCode: 200, 
+                data: {
+                    chat: updatedChat,
+                    message: responseMessage
+                }
+            };
+
+        } catch (error) {
+            await session.abortTransaction();
+
+            // File cleanup
+            if (file && fs.existsSync(file.path)) {
+                fs.unlinkSync(file.path);
+            }
+
+            console.error("updateGroupPicture servisinde hata:", error);
+            return {
+                success: false,
+                statusCode: error.statusCode || 500,
+                errorMessage: error.errorMessage || error.message || "Grup resmi güncellenirken hata oluştu."
+            };
+        } finally {
+            session.endSession();
+        }
+    }
     async getUserChats(userId) {
         try {
             const userChats = await chatRepository.findUserChats(userId);

@@ -1,7 +1,11 @@
 import React, { useState } from 'react';
 import AuthForm from './AuthForm';
 import toast from 'react-hot-toast';
+import { API_BASE_URL } from '../../services/api';
 
+  const backgroundStyle = { // whatsapp-like bg
+    backgroundImage: `url(${API_BASE_URL}/auth-page-bg.png)`
+  };
 const AuthPage = ({ onAuthSuccess }) => {
   const [isLogin, setIsLogin] = useState(true);
   const handleRegStatus = (status) => {
@@ -9,7 +13,9 @@ const AuthPage = ({ onAuthSuccess }) => {
     setIsLogin(status);
   }
   return (
-    <div className="auth-page">
+    <div className="auth-page" 
+        style={backgroundStyle}
+    >
       <div className="auth-card">
         <h1 className="auth-title">WhatsApp Clone</h1>
         

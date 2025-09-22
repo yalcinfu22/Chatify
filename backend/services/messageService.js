@@ -29,22 +29,23 @@ export default class MessageService {
         const senderId = (contentType === 'system') ? SYSTEM_USER_ID : userId;
         let updatedChat = null
 
+        const chat = await chatRepository.findNonDeletedById(chatId, { session });
+        if (!chat) {
+            throw { statusCode: 404, errorMessage: "Chat not found" };
+        }
         if(contentType != 'system') {
-            const chat = await chatRepository.findNonDeletedById(chatId, { session });
-            if (!chat) {
-                throw { statusCode: 404, message: "Chat not found" };
-            }
             if (!isUserMemberOfChat(chat, userId)) {
-                throw { statusCode: 403, message: "User cannot send a message to this chat" };
+                throw { statusCode: 403, errorMessage: "User cannot send a message to this chat" };
             }
         }
+    
         let attachmentId = null;
         if (file) {
             // imageService de transaction-aware olmalı ve session'ı kullanmalı
             const imageResult = await imageService.saveImage(file, userId, session);
             if (!imageResult.success) {
                 // Hata objesi fırlatarak transaction'ın genel catch bloğuna düşmesini sağla
-                throw { statusCode: 400, message: imageResult.errorMessage };
+                throw { statusCode: 400, errorMessage: imageResult.errorMessage };
             }
             attachmentId = imageResult.data._id;
         }
@@ -128,7 +129,7 @@ export default class MessageService {
             return {
                 success: false,
                 statusCode: error.statusCode || 500,
-                errorMessage: error.message || "Mesaj gönderilirken sunucuda beklenmedik bir hata oluştu."
+                errorMessage: error.message || error.errorMessage || "Mesaj gönderilirken sunucuda beklenmedik bir hata oluştu."
             };
         } finally {
             if (isTransactionOwner) {
@@ -136,6 +137,7 @@ export default class MessageService {
             }
         }
     }
+    
 
     async deleteMessage(messageId, userId) { // adminler de silebilecek silinen mesaj'ın deletedBy'ı değişecek
         const session = await mongoose.startSession()

@@ -11,6 +11,8 @@ const authorizationController = new AuthorizationController();
 import ChatService from './services/chatService.js';
 const chatService = new ChatService();
 
+import { setIoInstance } from './socketManager.js';
+
 const { success, error } = consola;
 
 // Single socket per user - stores userId -> socketId
@@ -25,6 +27,8 @@ export const initializeSocket = (httpServer) => {
             credentials: true,
         } 
     });
+
+    setIoInstance(io); // SocketManager 
 
     io.use(authorizationController.verifySocketToken);
 

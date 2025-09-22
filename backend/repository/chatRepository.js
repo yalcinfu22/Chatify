@@ -102,7 +102,6 @@ export default class ChatRepository {
     async findById(chatId, options = {}) {
         try {
             const { populateOptions = null, session = null } = options;
-            
             let query = Chat.findById(chatId);
             
             if (populateOptions) {
@@ -117,6 +116,51 @@ export default class ChatRepository {
             return chat;
         } catch (error) {
             console.log("Error in findById repository", error);
+            throw error;
+        }
+    }
+
+    // ChatRepository içine eklenecek metod
+    async updateGroupPictureAndLatestMessage(chatId, newPictureId, messageId, session = null) {
+        try {
+            // Tek operasyonda hem resim hem son mesaj güncelle
+            const updatedChat = await Chat.findByIdAndUpdate(
+                chatId,
+                {
+                    $set: {
+                        groupPicture: newPictureId,
+                        latestMessage: messageId,
+                        updatedAt: new Date()
+                    }
+                },
+                {
+                    new: true, // Güncellenmiş versiyonu döndür
+                    session,   // Transaction session
+                    populate: [
+                        {
+                            path: 'groupPicture',
+                            select: 'url',
+                            model: 'Image'
+                        },
+                        {
+                            path: 'latestMessage',
+                            select: 'content contentType createdAt',
+                            populate: {
+                                path: 'sender',
+                                select: 'name username'
+                            }
+                        }
+                    ]
+                }
+            );
+            
+            if (!updatedChat) {
+                throw new Error('Chat not found or update failed');
+            }
+            
+            return updatedChat;
+        } catch (error) {
+            console.error("Error in updateGroupPictureAndLatestMessage repository:", error);
             throw error;
         }
     }
