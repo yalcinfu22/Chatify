@@ -262,6 +262,50 @@ export default class ChatRepository {
         }
     }
 
+    async updateChatNameAndLatestMessage(chatId, newName, messageId, session = null) {
+        try {
+            // Tek operasyonda hem grup adı hem son mesaj güncelle
+            const updatedChat = await Chat.findByIdAndUpdate(
+                chatId,
+                {
+                    $set: {
+                        name: newName,
+                        latestMessage: messageId,
+                        updatedAt: new Date()
+                    }
+                },
+                {
+                    new: true, // Güncellenmiş versiyonu döndür
+                    session,   // Transaction session
+                    populate: [
+                        {
+                            path: 'groupPicture',
+                            select: 'url',
+                            model: 'Image'
+                        },
+                        {
+                            path: 'latestMessage',
+                            select: 'content contentType createdAt',
+                            populate: {
+                                path: 'sender',
+                                select: 'name username'
+                            }
+                        }
+                    ]
+                }
+            );
+            
+            if (!updatedChat) {
+                throw new Error('Chat not found or update failed');
+            }
+            
+            return updatedChat;
+        } catch (error) {
+            console.error("Error in updateChatNameAndLatestMessage repository:", error);
+            throw error;
+        }
+    }
+
     // repository/chatRepository.js
     async findChatDetailsById(chatId) {
         // Bu sefer her şeyi, özellikle tüm üyeleri ve adminleri detaylıca populate ediyoruz.

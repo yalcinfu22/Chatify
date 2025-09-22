@@ -93,37 +93,35 @@ const MainChat = () => {
 
   useEffect(() => {
     if (!socket) return;
-  
+    
     const handleChatUpdate = (updatedChat) => {
       if (!updatedChat) return;
       
       // Önce mevcut chat'i bul
       const existingChat = chats.find(chat => chat._id === updatedChat._id);
       if (!existingChat) return;
-      
       // Formatlanmış chat objesini oluştur
       const correctFormatUpdatedChat = {
         ...existingChat,
-        name: updatedChat.name,
+        displayName: updatedChat.displayName,
         groupPicture: updatedChat.groupPicture?.url || null,
         latestMessage: updatedChat.latestMessage,
         updatedAt: updatedChat.updatedAt
       };
-      
       // Chat listesini güncelle
       setChats(prev => {
         const otherChats = prev.filter(chat => chat._id !== updatedChat._id);
         return [correctFormatUpdatedChat, ...otherChats];
       });
-    
+
       // Eğer bu seçili chat ise, metadata'sını güncelle
       if (selectedChat?._id === updatedChat._id) {
         setSelectedChat(correctFormatUpdatedChat);
       }
     };
-  
+
     socket.on("chat-updated", handleChatUpdate);
-  
+
     return () => {
       socket.off("chat-updated", handleChatUpdate);
     };

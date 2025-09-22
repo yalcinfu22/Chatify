@@ -23,6 +23,8 @@ import generateInviteCode from '../helpers/nanoid.js';
 import { canUserManageGroup, isUserMemberOfChat } from '../helpers/permission.js';
 import { getIoInstance } from '../socketManager.js';
 
+import test from '../utils/test.js';
+
 const chatRepository = new ChatRepository();
 const imageService = new ImageService();
 const userRepository = new UserRepository();
@@ -627,7 +629,7 @@ export default class ChatService {
                 errorMessage: error.errorMessage || error.message || "Grup resmi güncellenirken hata oluştu."
             };
         } finally {
-            session.endSession();
+            await session.endSession();
         }
     }
     async getUserChats(userId) {
@@ -643,6 +645,155 @@ export default class ChatService {
         } catch (error) {
             console.error("getChats servisinde hata:", error);
             return { success: false, errorMessage: "Sohbetler getirilirken bir hata oluştu." };
+        }
+    }
+
+    async updateGroupName(chatId, userId, name, session = null) {
+        // Transaction ownership kontrolü
+        const isTransactionOwner = !session;
+        const activeSession = isTransactionOwner ? await mongoose.startSession() : session;
+        
+        try {
+            if (isTransactionOwner) {
+                activeSession.startTransaction();
+            }
+            
+            // Input validation
+            if (!name || name.trim().length === 0) {
+                throw { statusCode: 400, errorMessage: "Grup adı boş olamaz." };
+            }
+            
+            if (name.trim().length > 50) {
+                throw { statusCode: 400, errorMessage: "Grup adı 50 karakterden uzun olamaz." };
+            }
+            
+            // Adım 1: Sohbeti bul ve yetkiyi kontrol et
+            const originalChat = await chatRepository.findNonDeletedById(chatId, activeSession);
+            if (!originalChat) {
+                throw { statusCode: 404, errorMessage: "Grup sohbeti bulunamadı." };
+            }
+            
+            if (!originalChat.isGroupChat) {
+                throw { statusCode: 400, errorMessage: "Sadece grup sohbetlerinin adı değiştirilebilir." };
+            }
+            
+            if (!canUserManageGroup(originalChat, userId)) {
+                throw { statusCode: 403, errorMessage: "Bu işlemi yapma yetkiniz yok." };
+            }
+            
+            const trimmedName = name.trim();
+            
+            // Aynı isim kontrolü
+            if (originalChat.name === trimmedName) {
+                throw { statusCode: 400, errorMessage: "Yeni grup adı mevcut adla aynı." };
+            }
+            
+            // Adım 2: User bilgisini getir (system message için)
+            const user = await userRepository.findById(userId, activeSession);
+            const oldName = originalChat.name;
+            const systemMessageContent = `${user.name} ${user.surname} changed the group name from "${oldName}" to "${trimmedName}"`;
+            
+            // Adım 3: System mesajını kaydet
+            const messageInfo = {
+                content: systemMessageContent,
+                contentType: 'system',
+                attachment: null,
+                sender: SYSTEM_USER_ID,
+                chat: chatId
+            };
+            const newMessage = await messageRepository.saveMessage(messageInfo, activeSession);
+            
+            // Adım 4: Chat'i hem yeni isim hem son mesajla birlikte güncelle
+            const updatedChat = await chatRepository.updateChatNameAndLatestMessage(
+                chatId, 
+                trimmedName, 
+                newMessage._id, 
+                activeSession
+            );
+
+            // Adım 5: TRANSACTION'I ONAYLA (owner ise)
+            if (isTransactionOwner) {
+                await activeSession.commitTransaction();
+            }
+            
+            // --- Transaction bitti, şimdi populate ve bildirimler ---
+            
+            // Message'ı populate et (transaction dışında)
+            const populatedMessage = await newMessage.populate([
+                {
+                    path: 'sender',
+                    select: 'name username profilePicture',
+                    populate: { 
+                        path: 'profilePicture', 
+                        select: 'url', 
+                        model: 'Image'
+                    }
+                },
+                { 
+                    path: 'attachment', 
+                    select: 'url', 
+                    model: 'Image'
+                }
+            ]);
+            
+            // Response message'a chatUpdatedAt ekle
+            const responseMessage = {
+                ...populatedMessage.toObject(),
+                chatUpdatedAt: updatedChat.updatedAt
+            };
+            // Adım 6: WebSocket ile herkese haber ver
+            const io = getIoInstance();
+            if (io) {
+                // A) Chat güncellemesi
+                io.to(chatId).emit('chat-updated', {
+                    _id: chatId, 
+                    displayName: updatedChat.name,
+                    groupPicture: updatedChat.groupPicture || null, 
+                    latestMessage: updatedChat.latestMessage,
+                    updatedAt: updatedChat.updatedAt
+                });
+                
+                // B) Yeni sistem mesajı
+                io.to(chatId).emit('system-message', responseMessage);
+            }
+            
+            // Response formatını sadeleştir
+            const chatResponse = {
+                _id: updatedChat._id,
+                isGroupChat: updatedChat.isGroupChat,
+                name: updatedChat.name,
+                displayName: updatedChat.name,
+                groupPicture: updatedChat.groupPicture?.url || null,
+                latestMessage: {
+                    _id: updatedChat.latestMessage._id,
+                    content: updatedChat.latestMessage.content,
+                    contentType: updatedChat.latestMessage.contentType,
+                    sender: updatedChat.latestMessage.sender,
+                    createdAt: updatedChat.latestMessage.createdAt
+                },
+                updatedAt: updatedChat.updatedAt
+            };
+            return { 
+                success: true, 
+                statusCode: 200, 
+                data: chatResponse
+            };
+            
+        } catch (error) {
+            if (isTransactionOwner) {
+                await activeSession.abortTransaction();
+            }
+            
+            console.error("updateGroupName servisinde hata:", error);
+            return {
+                success: false,
+                statusCode: error.statusCode || 500,
+                errorMessage: error.errorMessage || error.message || "Grup adı güncellenirken hata oluştu."
+            };
+        } finally {
+            if (isTransactionOwner) {
+                activeSession.endSession();
+            }
         }
     }
 

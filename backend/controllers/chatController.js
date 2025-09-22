@@ -143,7 +143,7 @@ export default class ChatController {
             });
         }
     }
-
+    /*
     async startOrJoinVideoCall(req, res) { // todo: status kodlar eklenmeli
         try {
             const {chatId} = req.params;
@@ -157,6 +157,23 @@ export default class ChatController {
                 success: false,
                 message: 'Internal server error'
             });    
+        }
+    }
+    */
+    async updateGroupName(req, res) {
+        try {
+            const { chatId } = req.params;
+            const userId = req.user.userId
+            const { name } = req.body;
+
+            const result = await chatService.updateGroupName(chatId, userId, name);
+            if(!result.success) {
+                return res.status(result.statusCode || 400).json(result.errorMessage)
+            }
+
+            return res.status(result.statusCode || 200).json(result)
+        } catch (error) {
+            return res.status(500).json(error.message)
         }
     }
 }

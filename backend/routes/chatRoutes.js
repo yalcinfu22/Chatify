@@ -144,5 +144,29 @@ router.patch(
     chatController.updateGroupPicure
 )
 
+router.patch(
+  "/:chatId/group-name",
+  // chatId kontrolü
+  param("chatId")
+    .isMongoId()
+    .withMessage("Geçerli bir sohbet IDsi girilmelidir.")
+    .bail(), // chatId yanlışsa direkt hata dön, diğer middleware'lere geçme
+  // name kontrolü
+  check("name")
+    .exists({ checkFalsy: true })
+    .withMessage("Group name is required")
+    .bail() // eksikse diğer kurallara bakma
+    .trim()
+    .notEmpty()
+    .withMessage("Group name cannot be empty")
+    .bail()
+    .isLength({ max: 100 })
+    .withMessage("Max group name length is 100 characters"),
+  validationController.validateRequest,
+  chatController.updateGroupName
+);
+
+
+
 
 export default router

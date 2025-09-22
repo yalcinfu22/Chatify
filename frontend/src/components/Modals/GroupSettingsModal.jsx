@@ -16,28 +16,27 @@ const GroupSettingsModal = ({ chat, onClose }) => {
 
     setLoading(true);
     try {
-      const { data } = await fetchWithToken(`/chats/${chat._id}`, { // todo
+      const { data } = await fetchWithToken(`/chats/${chat._id}/group-name`, { // todo
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: groupName })
       });
-
+        console.log(data)
       if (data.success) {
-        alert('Group name updated successfully');
-        onUpdate();
+        toast.success('Group name updated successfully');
         onClose();
       } else {
-        alert(data.errorMessage || 'Failed to update group name');
+        toast.error(data.errorMessage || 'Failed to update group name');
       }
     } catch (error) {
-      alert('Failed to update group name');
+      toast.success('Failed to update group name');
     }
     setLoading(false);
   };
 
   const handleUpdatePicture = async () => {
     if (!groupPicture) {
-      alert('Please select a picture');
+      toast.error('Please select a picture');
       return;
     }
 
