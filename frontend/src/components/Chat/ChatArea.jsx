@@ -104,7 +104,9 @@ const ChatArea = ({ chatId, chatData, onChatUpdate, onLeaveChat }) => {
         console.log("no chat selected");
         return;
       }
-      setMessages(prev => [...prev, systemMessage]);
+      if(chatId === msgDetails.chat_id) {
+        setMessages(prev => [...prev, systemMessage]);
+      }
     };
     
     if(socket) {
