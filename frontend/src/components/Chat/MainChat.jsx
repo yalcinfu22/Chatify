@@ -103,8 +103,8 @@ const MainChat = () => {
       // Formatlanmış chat objesini oluştur
       const correctFormatUpdatedChat = {
         ...existingChat,
-        displayName: updatedChat.displayName,
-        groupPicture: updatedChat.groupPicture?.url || null,
+        displayName: updatedChat.displayName || existingChat.displayName,
+        groupPicture: updatedChat.groupPicture.url || updatedChat.groupPicture || null,
         latestMessage: updatedChat.latestMessage,
         updatedAt: updatedChat.updatedAt
       };

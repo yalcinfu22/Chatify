@@ -8,6 +8,8 @@ import { useSocket } from '../../contexts/SocketContext';
 import { toast } from 'react-hot-toast'; // will be used in the future
 import EmojiPicker from 'emoji-picker-react';
 
+const systemNotification = new Audio(`${API_BASE_URL}/sounds/system-notification.mp3`);
+
 const ChatArea = ({ chatId, chatData, onChatUpdate, onLeaveChat }) => {
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -104,8 +106,10 @@ const ChatArea = ({ chatId, chatData, onChatUpdate, onLeaveChat }) => {
         console.log("no chat selected");
         return;
       }
-      if(chatId === msgDetails.chat_id) {
+      console.log(systemMessage)
+      if(chatId === systemMessage.chat) {
         setMessages(prev => [...prev, systemMessage]);
+        systemNotification.play().catch(err => console.log('systen-notification sound failed:', err));
       }
     };
     
