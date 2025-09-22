@@ -8,7 +8,7 @@ import { useSocket } from '../../contexts/SocketContext';
 import { toast } from 'react-hot-toast'; // will be used in the future
 import EmojiPicker from 'emoji-picker-react';
 
-const ChatArea = ({ chat, onLeaveChat }) => {
+const ChatArea = ({ chatId, chatData, onChatUpdate, onLeaveChat }) => {
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(false);
   const [newMessage, setNewMessage] = useState('');
@@ -28,14 +28,13 @@ const ChatArea = ({ chat, onLeaveChat }) => {
   const { socket } = useSocket();
 
   useEffect(() => {
-    // Hem chat hem de user yüklendiğinde fonksiyonları çalıştır
-    if (chat && user) {
+    if (chatId && user) {
       fetchMessages();
-      if (chat.isGroupChat) {
+      if (chatData?.isGroupChat) {
         checkAdminStatus();
       }
     }
-  }, [chat, user]);
+  }, [chatId, user]); // chatData'yı dependency'den çıkardık!
 
   const onEmojiClick = (emojiObject) => {
     const emoji = emojiObject.emoji;
@@ -76,11 +75,11 @@ const ChatArea = ({ chat, onLeaveChat }) => {
   useEffect(() => {
     // Listen for 'new-message' events from the server
     const handleNewMessage = (msgDetails) => {
-      if(!chat) {
+      if(!chatId) {
         console.log("no chat selected");
         return;
       }
-      if(chat._id === msgDetails.chat_id) {
+      if(chatId === msgDetails.chat_id) {
         const { chat_id, ...message} = msgDetails;
         setMessages(prev => [...prev, message]);
       }
@@ -96,7 +95,30 @@ const ChatArea = ({ chat, onLeaveChat }) => {
         socket.off("new-message", handleNewMessage);
       }
     };
-  }, [chat]); 
+  }, [chatId]); 
+
+  useEffect(() => {
+    // Listen for 'system-message' events from the server
+    const handleSystemMessage = (systemMessage) => {
+      if(!chatId) {
+        console.log("no chat selected");
+        return;
+      }
+      setMessages(prev => [...prev, systemMessage]);
+    };
+    
+    if(socket) {
+      socket.on("system-message", handleSystemMessage);
+    }
+
+    // Cleanup to avoid duplicate listeners
+    return () => {
+      if(socket) {
+        socket.off("system-message", handleSystemMessage);
+      }
+    };
+  }, [chatId]); 
+
 
   useEffect(() => {
     scrollToBottom();
@@ -108,7 +130,7 @@ const ChatArea = ({ chat, onLeaveChat }) => {
 
   const checkAdminStatus = async () => {
     try {
-      const { data } = await fetchWithToken(`/chats/${chat._id}`);
+      const { data } = await fetchWithToken(`/chats/${chatId}`);
       if (data && data.admins) {
         setIsAdmin(data.admins.includes(user.id));
       }
@@ -120,7 +142,7 @@ const ChatArea = ({ chat, onLeaveChat }) => {
   const fetchMessages = async () => {
     setLoading(true);
     try {
-      const { data } = await fetchWithToken(`/chats/${chat._id}/messages`);
+      const { data } = await fetchWithToken(`/chats/${chatId}/messages`);
       if (data.success) {
         let messageData = data.data?.messages || [];
         messageData = Array.isArray(messageData) ? messageData : [];
@@ -159,7 +181,7 @@ const ChatArea = ({ chat, onLeaveChat }) => {
       formData.append('contentType', contentType);
 
       const token = localStorage.getItem('token');
-      const response = await fetch(`${API_BASE_URL}/chats/${chat._id}/messages`, {
+      const response = await fetch(`${API_BASE_URL}/chats/${chatId}/messages`, {
         method: 'POST',
         headers: { 'token': token },
         body: formData
@@ -168,7 +190,7 @@ const ChatArea = ({ chat, onLeaveChat }) => {
       const data = await response.json();
       if (data.success) {
         const newMsgDetails = {
-          chat_id: chat._id,
+          chat_id: chatId,
           ...data.data,
         };
 
@@ -191,7 +213,7 @@ const ChatArea = ({ chat, onLeaveChat }) => {
     if (!confirm('Delete this message?')) return;
     
     try {
-      const { data } = await fetchWithToken(`/chats/${chat._id}/messages/${messageId}`, {
+      const { data } = await fetchWithToken(`/chats/${chatId}/messages/${messageId}`, {
         method: 'DELETE'
       });
 
@@ -206,23 +228,23 @@ const ChatArea = ({ chat, onLeaveChat }) => {
   };
 
   const handleLeaveChat = async () => {
-    const message = chat.isGroupChat 
+    const message = chatData.isGroupChat 
       ? 'Are you sure you want to leave this group?' 
       : 'Are you sure you want to hide this chat?';
     
     if (!confirm(message)) return;
     
     try {
-      const endpoint = chat.isGroupChat 
-        ? `/chats/${chat._id}/members/me`
-        : `/chats/${chat._id}`;
+      const endpoint = chatData.isGroupChat 
+        ? `/chats/${chatId}/members/me`
+        : `/chats/${chatId}`;
       
       const { data, status } = await fetchWithToken(endpoint, {
         method: 'DELETE'
       });
 
       if (status === 200 || status === 204 || data?.success) {
-        onLeaveChat(chat._id);
+        onLeaveChat(chatId);
       } else {
         alert(data?.errorMessage || 'Failed to leave/hide chat');
       }
@@ -366,7 +388,7 @@ const ChatArea = ({ chat, onLeaveChat }) => {
     }
   };
 
-  if (!chat) {
+  if (!chatId) {
     return (
       <div className="chat-area-empty">
         <div className="empty-icon">💬</div>
@@ -379,7 +401,7 @@ const ChatArea = ({ chat, onLeaveChat }) => {
     backgroundImage: `url(${API_BASE_URL}/chat-area-bg.png)`
   };
 
-  const chatDisplayName = chat.displayName || chat.name || 'Chat';
+  const chatDisplayName = chatData.displayName || chatData.name || 'Chat';
   const firstLetter = chatDisplayName[0]?.toUpperCase() || '?';
 
   return (
@@ -389,23 +411,23 @@ const ChatArea = ({ chat, onLeaveChat }) => {
       <div className="chat-header">
         <div 
           className="chat-avatar"
-          style={chat.groupPicture ? {
-            backgroundImage: `url(${API_BASE_URL}/${chat.groupPicture})`
+          style={chatData.groupPicture ? {
+            backgroundImage: `url(${API_BASE_URL}/${chatData.groupPicture})`
           } : {}}
         >
-          {!chat.groupPicture && firstLetter}
+          {!chatData.groupPicture && firstLetter}
         </div>
         <div className="chat-header-info">
           <div className="chat-name">{chatDisplayName}</div>
           <div className="chat-status">
-            {chat.isGroupChat ? 'Group Chat' : 'Direct Chat'}
+            {chatData.isGroupChat ? 'Group Chat' : 'Direct Chat'}
           </div>
         </div>
         <div className="chat-header-actions">
           <button onClick={() => setShowDetails(true)} className="details-btn">
             ⓘ Details
           </button>
-          {chat.isGroupChat && isAdmin && (
+          {chatData.isGroupChat && isAdmin && (
             <button 
               onClick={() => setShowSettings(true)} 
               style={{
@@ -422,7 +444,7 @@ const ChatArea = ({ chat, onLeaveChat }) => {
             </button>
           )}
           <button onClick={handleLeaveChat} className="leave-btn">
-            {chat.isGroupChat ? 'Leave' : 'Hide'}
+            {chatData.isGroupChat ? 'Leave' : 'Hide'}
           </button>
         </div>
       </div>
@@ -497,7 +519,7 @@ const ChatArea = ({ chat, onLeaveChat }) => {
                     }
                   }}
                 >
-                  {!isMyMessage && chat.isGroupChat && msg.contentType !== 'system' && (
+                  {!isMyMessage && chatData.isGroupChat && msg.contentType !== 'system' && (
                     <div style={{ fontSize: '11px', color: '#25D366', marginBottom: '4px', fontWeight: 'bold' }}>
                       {senderName}
                     </div>
@@ -614,14 +636,14 @@ const ChatArea = ({ chat, onLeaveChat }) => {
 
       {showDetails && (
         <ChatDetailsModal 
-          chat={chat} 
+          chat={chatData} 
           onClose={() => setShowDetails(false)} 
         />
       )}
 
       {showSettings && (
         <GroupSettingsModal
-          chat={chat}
+          chat={chatData}
           onClose={() => setShowSettings(false)}
         />
       )}

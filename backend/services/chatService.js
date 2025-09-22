@@ -601,31 +601,15 @@ export default class ChatService {
             const io = getIoInstance();
             if (io) {
                 // A) Chat güncellemesi
-                io.to(chatId).emit('chat-updated', {
-                    chatId,
-                    updatedFields: { 
-                        groupPicture: updatedChat.groupPicture,
-                        latestMessage: updatedChat.latestMessage,
-                        updatedAt: updatedChat.updatedAt
-                    }
-                });
+                io.to(chatId).emit('chat-updated', updatedChat);
 
                 // B) Yeni sistem mesajı
-                io.to(chatId).emit('system-message', {
-                    success: true,
-                    statusCode: 201,
-                    message: "Mesaj başarıyla gönderildi.",
-                    data: responseMessage
-                });
+                io.to(chatId).emit('system-message', responseMessage);
             }
 
             return { 
                 success: true, 
-                statusCode: 200, 
-                data: {
-                    chat: updatedChat,
-                    message: responseMessage
-                }
+                statusCode: 200,
             };
 
         } catch (error) {

@@ -23,7 +23,7 @@ export const initializeSocket = (httpServer) => {
     const io = new Server(httpServer, { 
         cors: {
             origin: ["http://localhost:5173", "http://localhost:3001"],
-            methods: ["GET", "POST", "DELETE"],
+            methods: ["GET", "POST", "DELETE", "PATCH", "PUT"],
             credentials: true,
         } 
     });

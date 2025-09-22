@@ -93,6 +93,44 @@ const MainChat = () => {
 
   useEffect(() => {
     if (!socket) return;
+  
+    const handleChatUpdate = (updatedChat) => {
+      if (!updatedChat) return;
+      
+      // Önce mevcut chat'i bul
+      const existingChat = chats.find(chat => chat._id === updatedChat._id);
+      if (!existingChat) return;
+      
+      // Formatlanmış chat objesini oluştur
+      const correctFormatUpdatedChat = {
+        ...existingChat,
+        name: updatedChat.name,
+        groupPicture: updatedChat.groupPicture?.url || null,
+        latestMessage: updatedChat.latestMessage,
+        updatedAt: updatedChat.updatedAt
+      };
+      
+      // Chat listesini güncelle
+      setChats(prev => {
+        const otherChats = prev.filter(chat => chat._id !== updatedChat._id);
+        return [correctFormatUpdatedChat, ...otherChats];
+      });
+    
+      // Eğer bu seçili chat ise, metadata'sını güncelle
+      if (selectedChat?._id === updatedChat._id) {
+        setSelectedChat(correctFormatUpdatedChat);
+      }
+    };
+  
+    socket.on("chat-updated", handleChatUpdate);
+  
+    return () => {
+      socket.off("chat-updated", handleChatUpdate);
+    };
+  }, [socket, selectedChat, chats]); // chats'i dependency'ye ekle
+
+  useEffect(() => {
+    if (!socket) return;
 
     const handleNewDirectChat = (newDirectChat) => {
       addedToNewChat
@@ -139,8 +177,9 @@ const MainChat = () => {
         onRefresh={fetchChats}
         highlightChatId={highlightChatId}  // Animation props
       />
-      <ChatArea
-        chat={selectedChat}
+      <ChatArea 
+        chatId={selectedChat?._id}
+        chatData={selectedChat}  // profile resmi vb. için
         onLeaveChat={handleLeaveChat}
       />
     </div>
