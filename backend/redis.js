@@ -1,19 +1,20 @@
-import { createClient } from 'redis';
+import { Redis } from '@upstash/redis';
 
-// Redis client'ını oluştur.
-const redisClient = createClient({
-    // Eğer Redis'i Docker ile veya lokalde default portta çalıştırıyorsan
-    // buraya bir URL girmene gerek yok.
-    // url: 'redis://<user>:<password>@<host>:<port>'
+// Upstash Redis client'ını oluştur
+const redisClient = new Redis({
+  url: process.env.UPSTASH_REDIS_REST_URL,
+  token: process.env.UPSTASH_REDIS_REST_TOKEN
 });
 
-redisClient.on('error', (err) => console.log('❌ Redis Client Error', err));
-redisClient.on('connect', () => console.log('✅ Connected to Redis successfully!'));
-
-// Asenkron olarak bağlantıyı kur.
+// Bağlantı test fonksiyonu
 const connectRedis = async () => {
-    await redisClient.connect();
+  try {
+    const result = await redisClient.ping();
+    console.log('✅ Connected to Upstash Redis successfully!', result);
+  } catch (err) {
+    console.error('❌ Upstash Redis Connection Error:', err);
+    throw err;
+  }
 };
 
-// Bağlantıyı ana sunucu dosyasında başlatmak için fonksiyonu export et.
 export { redisClient, connectRedis };
