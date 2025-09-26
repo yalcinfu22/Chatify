@@ -39,45 +39,46 @@ const MainChat = () => {
   const selectedChatRef = useRef(selectedChat);
   selectedChatRef.current = selectedChat;
 
-  const handleChatListForNewMessage = (chatId, senderId, newMessage, chatUpdatedAt) => {
-    
-    if(selectedChatRef.current?._id === chatId) {
-      // Your sound logic
-      if(user.id !== senderId) {
-        receiveMessageSound.play().catch(err => console.log('Notification sound failed:', err));
-      } else {
-        sendMessageSound.play().catch(err => console.log('Send message sound failed:', err));
-      }
-    } else if(!selectedChatRef.current) {
-      notificationSound.play().catch(err => console.log('Notification sound failed:', err));
-    }
-
-    // Animation logic - sadece başkasının mesajında VE seçili chat değilse
-    if(user.id !== senderId && selectedChatRef.current?._id !== chatId) {
-      setHighlightChatId(chatId);
-      // Highlight'ı temizle
-      setTimeout(() => {
-        setHighlightChatId(null);
-      }, 600);
-    }
-
-    // Chat listesini güncelle - animasyon olmadan
-    setChats(prev => {
-      const updatedChat = prev.find(chat => chat._id === chatId);
-      if (!updatedChat) return prev;
-      
-      const refreshedChat = {
-        ...updatedChat,
-        latestMessage: newMessage,
-        updatedAt: chatUpdatedAt || newMessage.createdAt
-      };
-      
-      const otherChats = prev.filter(chat => chat._id !== chatId);
-      return [refreshedChat, ...otherChats]; // Sadece başa taşı, todo: animasyonlu olsun
-    });
-  };
-
   useEffect(() => {
+
+    const handleChatListForNewMessage = (chatId, senderId, newMessage, chatUpdatedAt) => {
+
+      if(selectedChatRef.current?._id === chatId) {
+        // Your sound logic
+        if(user.id !== senderId) {
+          receiveMessageSound.play().catch(err => console.log('Notification sound failed:', err));
+        } else {
+          sendMessageSound.play().catch(err => console.log('Send message sound failed:', err));
+        }
+      } else if(!selectedChatRef.current) {
+        notificationSound.play().catch(err => console.log('Notification sound failed:', err));
+      }
+
+      // Animation logic - sadece başkasının mesajında VE seçili chat değilse
+      if(user.id !== senderId && selectedChatRef.current?._id !== chatId) {
+        setHighlightChatId(chatId);
+        // Highlight'ı temizle
+        setTimeout(() => {
+          setHighlightChatId(null);
+        }, 600);
+      }
+
+      // Chat listesini güncelle - animasyon olmadan
+      setChats(prev => {
+        const updatedChat = prev.find(chat => chat._id === chatId);
+        if (!updatedChat) return prev;
+
+        const refreshedChat = {
+          ...updatedChat,
+          latestMessage: newMessage,
+          updatedAt: chatUpdatedAt || newMessage.createdAt
+        };
+
+        const otherChats = prev.filter(chat => chat._id !== chatId);
+        return [refreshedChat, ...otherChats]; // Sadece başa taşı, todo: animasyonlu olsun
+      });
+    };
+
     const handleNewMessage = (msgDetails) => {
       // Mesaj detaylarını ayrıştır
       const { chat_id, sender, chatUpdatedAt, ...rest } = msgDetails;
@@ -86,9 +87,10 @@ const MainChat = () => {
       handleChatListForNewMessage(chat_id, sender._id, newMessage, chatUpdatedAt);
     };
     
-    if(socket) {
-      socket.on("new-message", handleNewMessage);
-    }
+    socket?.on("new-message", handleNewMessage);
+    return () => {
+        socket?.off("new-message", handleNewMessage);
+    };
   }, [socket, user]);
 
   useEffect(() => {
@@ -100,6 +102,7 @@ const MainChat = () => {
       // Önce mevcut chat'i bul
       const existingChat = chats.find(chat => chat._id === updatedChat._id);
       if (!existingChat) return;
+      console.log(existingChat)
       // Formatlanmış chat objesini oluştur
       const correctFormatUpdatedChat = {
         ...existingChat,
@@ -108,6 +111,8 @@ const MainChat = () => {
         latestMessage: updatedChat.latestMessage,
         updatedAt: updatedChat.updatedAt
       };
+      console.log(correctFormatUpdatedChat)
+
       // Chat listesini güncelle
       setChats(prev => {
         const otherChats = prev.filter(chat => chat._id !== updatedChat._id);

@@ -9,7 +9,7 @@ import { initializeSocket } from "./socket.js";
 import { URL, PORT } from "./config/index.js"; // config => .env port ve db bilgilerine tek yerden erişmek için
 import { instrument } from '@socket.io/admin-ui';
 import { createSystemUser } from './system.js';
-import { connectRedis } from './/redis.js'; // Import et
+import { connectRedis } from './redis.js'; // Import et
 
 import Auth from './utils/auth.js'
 const auth = new Auth();

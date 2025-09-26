@@ -73,7 +73,7 @@ export const initializeSocket = (httpServer) => {
             await userRepository.setUserStatus(userId, "online");
 
             const chatIds = await userRepository.findUserChatIds(userId);
-            chatIds.forEach(chatId => {
+            chatIds.forEach(chatId => { // why noot emit to all at once?
                 socket.to(chatId.toString()).emit('user-status-changed', { 
                     userId, 
                     Status: "online",
