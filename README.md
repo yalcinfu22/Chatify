@@ -1,4 +1,4 @@
-# Whatsapp-Clone
+# Chatify
 
 A real-time chat application inspired by WhatsApp. Direct messages, group chats with invite codes, file/image attachments, and live online status — built end-to-end with Node.js, MongoDB, Socket.IO, and React.
 
